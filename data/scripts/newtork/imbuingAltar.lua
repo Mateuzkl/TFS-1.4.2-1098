@@ -75,7 +75,7 @@ end
 -- config
 ImbuingAltars = {
 	-- regular
-	27716, 27717,
+	27728, 27717,
 
 	-- wrappable
 	27830, 27831,

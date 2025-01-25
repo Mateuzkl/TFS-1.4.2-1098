@@ -30,6 +30,15 @@ function Item.isTile(self)
 	return false
 end
 
+function Item:getClientId()
+	return self:getType():getClientId()
+end
+
+function Item:getClassification()
+	return self:getType():getClassification()
+end
+
+
 -- Helper class to make string formatting prettier
 
 StringStream = {}

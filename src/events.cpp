@@ -108,6 +108,8 @@ bool Events::load()
 				info.playerOnGainSkillTries = event;
 			} else if (methodName == "onWrapItem") {
 				info.playerOnWrapItem = event;
+			} else if (methodName == "onNetworkMessage") {
+				info.playerOnNetworkMessage = event;
 			} else if (methodName == "onImbuementApply") {
 				info.playerOnImbuementApply = event;
 			} else if (methodName == "onImbuementClear") {
@@ -1037,6 +1039,28 @@ void Events::eventPlayerOnWrapItem(Player* player, Item* item)
 	LuaScriptInterface::setItemMetatable(L, -1, item);
 
 	scriptInterface.callVoidFunction(2);
+}
+
+void Events::eventPlayerOnNetworkMessage(Player* player, uint8_t recvByte, NetworkMessage* msg)
+{
+	// Player:onNetworkMessage(recvByte, msg)
+	if (info.playerOnNetworkMessage == -1) {
+		return;
+	}
+	if (!scriptInterface.reserveScriptEnv()) {
+		std::cout << "[Error - Events::eventPlayerOnNetworkMessage] Call stack overflow" << std::endl;
+		return;
+	}
+	ScriptEnvironment* env = scriptInterface.getScriptEnv();
+	env->setScriptId(info.playerOnNetworkMessage, &scriptInterface);
+	lua_State* L = scriptInterface.getLuaState();
+	scriptInterface.pushFunction(info.playerOnNetworkMessage);
+	LuaScriptInterface::pushUserdata<Player>(L, player);
+	LuaScriptInterface::setMetatable(L, -1, "Player");
+	lua_pushnumber(L, recvByte);
+	LuaScriptInterface::pushUserdata<NetworkMessage>(L, msg);
+	LuaScriptInterface::setMetatable(L, -1, "NetworkMessage");
+	scriptInterface.callVoidFunction(3);
 }
 
 void Events::eventMonsterOnDropLoot(Monster* monster, Container* corpse)

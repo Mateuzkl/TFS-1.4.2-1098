@@ -396,6 +396,8 @@ class Game
 		void playerImbuingExit(uint32_t playerId);
 		void playerToggleImbuPanel(uint32_t playerId, bool enabled);
 
+		void parsePlayerNetworkMessage(uint32_t playerId, uint8_t recvByte, NetworkMessage* msg);
+
 		void parsePlayerExtendedOpcode(uint32_t playerId, uint8_t opcode, const std::string& buffer);
 
 		std::forward_list<Item*> getMarketItemList(uint16_t wareId, uint16_t sufficientCount, DepotChest* depotChest, Inbox* inbox);

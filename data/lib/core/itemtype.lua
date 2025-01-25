@@ -14,3 +14,19 @@ local slotBits = {
 function ItemType.usesSlot(self, slot)
 	return bit.band(self:getSlotPosition(), slotBits[slot] or 0) ~= 0
 end
+
+function ItemType:isHelmet()
+	return self:usesSlot(CONST_SLOT_HEAD)
+end
+
+function ItemType:isArmor()
+	return self:usesSlot(CONST_SLOT_ARMOR)
+end
+
+function ItemType:isLegs()
+	return self:usesSlot(CONST_SLOT_LEGS)
+end
+
+function ItemType:isBoots()
+	return self:usesSlot(CONST_SLOT_FEET)
+end

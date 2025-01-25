@@ -91,13 +91,11 @@ enum AttrTypes_t {
 	ATTR_WRAPID = 36,
 	ATTR_STOREITEM = 37,
 	ATTR_ATTACK_SPEED = 38,
-	// version 12.x
-	ATTR_OPENCONTAINER = 39,
-	ATTR_PODIUMOUTFIT = 40,
-	ATTR_TIER = 41,
+	ATTR_CLASSIFICATION = 39,
+	ATTR_TIER = 40,
 
-	ATTR_IMBUEMENTS = 42, // applied imbuements
-	ATTR_IMBUINGSLOTS = 43, // custom amount of imbuing slots
+	ATTR_IMBUEMENTS = 41, // applied imbuements
+	ATTR_IMBUINGSLOTS = 42, // custom amount of imbuing slots
 
 };
 
@@ -531,7 +529,7 @@ class ItemAttributes
 			| ITEM_ATTRIBUTE_ARMOR | ITEM_ATTRIBUTE_HITCHANCE | ITEM_ATTRIBUTE_SHOOTRANGE | ITEM_ATTRIBUTE_OWNER
 			| ITEM_ATTRIBUTE_DURATION | ITEM_ATTRIBUTE_DECAYSTATE | ITEM_ATTRIBUTE_CORPSEOWNER | ITEM_ATTRIBUTE_CHARGES
 			| ITEM_ATTRIBUTE_FLUIDTYPE | ITEM_ATTRIBUTE_DOORID | ITEM_ATTRIBUTE_DECAYTO | ITEM_ATTRIBUTE_WRAPID | ITEM_ATTRIBUTE_STOREITEM
-			| ITEM_ATTRIBUTE_ATTACK_SPEED;
+			| ITEM_ATTRIBUTE_ATTACK_SPEED | ITEM_ATTRIBUTE_CLASSIFICATION | ITEM_ATTRIBUTE_TIER;
 		const static uint32_t stringAttributeTypes = ITEM_ATTRIBUTE_DESCRIPTION | ITEM_ATTRIBUTE_TEXT | ITEM_ATTRIBUTE_WRITER
 			| ITEM_ATTRIBUTE_NAME | ITEM_ATTRIBUTE_ARTICLE | ITEM_ATTRIBUTE_PLURALNAME;
 
@@ -910,6 +908,18 @@ class Item : virtual public Thing
 				return getIntAttr(ITEM_ATTRIBUTE_ATTACK_SPEED);
 			}
 			return items[id].attackSpeed;
+		}
+		uint32_t getClassification() const {
+			if (hasAttribute(ITEM_ATTRIBUTE_CLASSIFICATION)) {
+				return getIntAttr(ITEM_ATTRIBUTE_CLASSIFICATION);
+			}
+			return items[id].classification;
+		}
+		uint32_t getTier() const {
+			if (hasAttribute(ITEM_ATTRIBUTE_TIER)) {
+				return getIntAttr(ITEM_ATTRIBUTE_TIER);
+			}
+			return items[id].tier;
 		}
 		int32_t getArmor() const {
 			if (hasAttribute(ITEM_ATTRIBUTE_ARMOR)) {

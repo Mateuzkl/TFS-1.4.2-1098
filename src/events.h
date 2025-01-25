@@ -9,6 +9,7 @@
 
 class Party;
 class ItemType;
+class NetworkMessage;
 class Tile;
 
 enum class EventInfoId {
@@ -50,6 +51,7 @@ class Events
 		int32_t playerOnLoseExperience = -1;
 		int32_t playerOnGainSkillTries = -1;
 		int32_t playerOnWrapItem = -1;
+		int32_t playerOnNetworkMessage = -1;
 		int32_t playerOnImbuementApply = -1;
 		int32_t playerOnImbuementClear = -1;
 		int32_t playerOnImbuementExit = -1;
@@ -96,6 +98,7 @@ class Events
 		void eventPlayerOnLoseExperience(Player* player, uint64_t& exp);
 		void eventPlayerOnGainSkillTries(Player* player, skills_t skill, uint64_t& tries);
 		void eventPlayerOnWrapItem(Player* player, Item* item);
+		void eventPlayerOnNetworkMessage(Player* player, uint8_t recvByte, NetworkMessage* msg);
 
 
 		void eventPlayerOnImbuementApply(Player* player, uint8_t slotId, uint8_t imbuId, bool luckProtection);
