@@ -15,7 +15,6 @@
 #include "raids.h"
 #include "npc.h"
 #include "wildcardtree.h"
-#include "quests.h"
 
 class ServiceManager;
 class Creature;
@@ -371,8 +370,6 @@ class Game
 		void playerRequestEditVip(uint32_t playerId, uint32_t guid, const std::string& description, uint32_t icon, bool notify);
 		void playerTurn(uint32_t playerId, Direction dir);
 		void playerRequestOutfit(uint32_t playerId);
-		void playerShowQuestLog(uint32_t playerId);
-		void playerShowQuestLine(uint32_t playerId, uint16_t questId);
 		void playerSay(uint32_t playerId, uint16_t channelId, SpeakClasses type,
 		               const std::string& receiver, const std::string& text);
 		void playerChangeOutfit(uint32_t playerId, Outfit_t outfit);
@@ -495,7 +492,6 @@ class Game
 		Map map;
 		Mounts mounts;
 		Raids raids;
-		Quests quests;
 
 		std::forward_list<Item*> toDecayItems;
 

@@ -556,8 +556,6 @@ void ProtocolGame::parsePacket(NetworkMessage& msg)
 		case 0xE6: parseBugReport(msg); break;
 		case 0xE7: /* thank you */ break;
 		case 0xE8: parseDebugAssert(msg); break;
-		case 0xF0: addGameTaskTimed(DISPATCHER_TASK_EXPIRATION, &Game::playerShowQuestLog, player->getID()); break;
-		case 0xF1: parseQuestLine(msg); break;
 		case 0xF2: parseRuleViolationReport(msg); break;
 		case 0xF3: /* get object info */ break;
 		case 0xF4: parseMarketLeave(); break;
@@ -1155,12 +1153,6 @@ void ProtocolGame::parseEnableSharedPartyExperience(NetworkMessage& msg)
 {
 	bool sharedExpActive = msg.getByte() == 1;
 	addGameTask(&Game::playerEnableSharedPartyExperience, player->getID(), sharedExpActive);
-}
-
-void ProtocolGame::parseQuestLine(NetworkMessage& msg)
-{
-	uint16_t questId = msg.get<uint16_t>();
-	addGameTask(&Game::playerShowQuestLine, player->getID(), questId);
 }
 
 void ProtocolGame::parseMarketLeave()
@@ -2077,40 +2069,6 @@ void ProtocolGame::sendMarketDetail(uint16_t itemId)
 		msg.add<uint32_t>(statistics->lowestPrice);
 	} else {
 		msg.addByte(0x00);
-	}
-
-	writeToOutputBuffer(msg);
-}
-
-void ProtocolGame::sendQuestLog()
-{
-	NetworkMessage msg;
-	msg.addByte(0xF0);
-	msg.add<uint16_t>(g_game.quests.getQuestsCount(player));
-
-	for (const Quest& quest : g_game.quests.getQuests()) {
-		if (quest.isStarted(player)) {
-			msg.add<uint16_t>(quest.getID());
-			msg.addString(quest.getName());
-			msg.addByte(quest.isCompleted(player));
-		}
-	}
-
-	writeToOutputBuffer(msg);
-}
-
-void ProtocolGame::sendQuestLine(const Quest* quest)
-{
-	NetworkMessage msg;
-	msg.addByte(0xF1);
-	msg.add<uint16_t>(quest->getID());
-	msg.addByte(quest->getMissionsCount(player));
-
-	for (const Mission& mission : quest->getMissions()) {
-		if (mission.isStarted(player)) {
-			msg.addString(mission.getName(player));
-			msg.addString(mission.getDescription(player));
-		}
 	}
 
 	writeToOutputBuffer(msg);

@@ -107,7 +107,6 @@ void Game::setGameState(GameState_t newState)
 			raids.loadFromXml();
 			raids.startup();
 
-			quests.loadFromXml();
 			mounts.loadFromXml();
 
 			loadMotdNum();
@@ -3390,31 +3389,6 @@ void Game::playerChangeOutfit(uint32_t playerId, Outfit_t outfit)
 	}
 }
 
-void Game::playerShowQuestLog(uint32_t playerId)
-{
-	Player* player = getPlayerByID(playerId);
-	if (!player) {
-		return;
-	}
-
-	player->sendQuestLog();
-}
-
-void Game::playerShowQuestLine(uint32_t playerId, uint16_t questId)
-{
-	Player* player = getPlayerByID(playerId);
-	if (!player) {
-		return;
-	}
-
-	Quest* quest = quests.getQuestByID(questId);
-	if (!quest) {
-		return;
-	}
-
-	player->sendQuestLine(quest);
-}
-
 void Game::playerSay(uint32_t playerId, uint16_t channelId, SpeakClasses type,
                      const std::string& receiver, const std::string& text)
 {
@@ -5722,7 +5696,6 @@ bool Game::reload(ReloadTypes_t reloadType)
 			return true;
 		}
 
-		case RELOAD_TYPE_QUESTS: return quests.reload();
 		case RELOAD_TYPE_RAIDS: return raids.reload() && raids.startup();
 
 		case RELOAD_TYPE_SPELLS: {
@@ -5760,7 +5733,6 @@ bool Game::reload(ReloadTypes_t reloadType)
 			Npcs::reload();
 			raids.reload() && raids.startup();
 			Item::items.reload();
-			quests.reload();
 			mounts.reload();
 			g_config.reload();
 			g_events->load();
@@ -5790,7 +5762,6 @@ bool Game::reload(ReloadTypes_t reloadType)
 			g_weapons->reload();
 			g_weapons->clear(true);
 			g_weapons->loadDefaults();
-			quests.reload();
 			mounts.reload();
 			g_globalEvents->reload();
 			g_events->load();

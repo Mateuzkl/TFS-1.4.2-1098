@@ -1091,16 +1091,6 @@ class Player final : public Creature, public Cylinder
 				client->sendAddMarker(pos, markType, desc);
 			}
 		}
-		void sendQuestLog() {
-			if (client) {
-				client->sendQuestLog();
-			}
-		}
-		void sendQuestLine(const Quest* quest) {
-			if (client) {
-				client->sendQuestLine(quest);
-			}
-		}
 		void sendEnterWorld() {
 			if (client) {
 				client->sendEnterWorld();
@@ -1229,7 +1219,6 @@ class Player final : public Creature, public Cylinder
 		uint64_t manaSpent = 0;
 		uint64_t lastAttack = 0;
 		uint64_t bankBalance = 0;
-		uint64_t lastQuestlogUpdate = 0;
 		int64_t lastFailedFollow = 0;
 		int64_t skullTicks = 0;
 		int64_t lastWalkthroughAttempt = 0;
