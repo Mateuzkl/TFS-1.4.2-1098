@@ -54,6 +54,8 @@ bool Events::load()
 				info.creatureOnTargetCombat = event;
 			} else if (methodName == "onHear") {
 				info.creatureOnHear = event;
+			} else if (methodName == "onAddCondition") {
+				info.creatureOnAddCondition = event;
 			} else {
 				std::cout << "[Warning - Events::load] Unknown creature method: " << methodName << std::endl;
 			}
@@ -297,6 +299,49 @@ void Events::eventCreatureOnHear(Creature* creature, Creature* speaker, const st
 	lua_pushnumber(L, type);
 
 	scriptInterface.callVoidFunction(4);
+}
+
+ReturnValue Events::eventCreatureOnAddCondition(Creature* creature, Condition* condition, bool isForced)
+{
+    if (info.creatureOnAddCondition == -1) {
+        return RETURNVALUE_NOERROR;
+    }
+
+    if (!scriptInterface.reserveScriptEnv()) {
+        std::cout << "[Error - Events::eventCreatureOnAddCondition] Call stack overflow" << std::endl;
+        return RETURNVALUE_NOTPOSSIBLE;
+    }
+
+    ScriptEnvironment* env = scriptInterface.getScriptEnv();
+    env->setScriptId(info.creatureOnAddCondition, &scriptInterface);
+
+    lua_State* L = scriptInterface.getLuaState();
+    scriptInterface.pushFunction(info.creatureOnAddCondition);
+
+    LuaScriptInterface::pushUserdata<Creature>(L, creature);
+    LuaScriptInterface::setCreatureMetatable(L, -1, creature);
+
+    LuaScriptInterface::pushUserdata<Condition>(L, condition);
+    LuaScriptInterface::setMetatable(L, -1, "Condition");
+
+    lua_pushboolean(L, isForced);
+
+    ReturnValue returnValue = RETURNVALUE_NOERROR;
+    if (scriptInterface.protectedCall(L, 3, 1) != 0) {
+        returnValue = RETURNVALUE_NOTPOSSIBLE;
+        LuaScriptInterface::reportError(nullptr, LuaScriptInterface::popString(L));
+    } else {
+        if (lua_isnumber(L, -1)) {
+            returnValue = LuaScriptInterface::getNumber<ReturnValue>(L, -1);
+        } else {
+            std::cout << "[Error - Events::eventCreatureOnAddCondition] Invalid return type from script" << std::endl;
+            returnValue = RETURNVALUE_NOTPOSSIBLE;
+        }
+        lua_pop(L, 1);
+    }
+
+    scriptInterface.resetScriptEnv();
+    return returnValue;
 }
 
 // Party

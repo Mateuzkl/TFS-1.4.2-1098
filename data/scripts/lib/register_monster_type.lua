@@ -13,11 +13,6 @@ MonsterType.register = function(self, mask)
 	return registerMonsterType(self, mask)
 end
 
-registerMonsterType.name = function(mtype, mask)
-	if mask.name then
-		mtype:name(mask.name)
-	end
-end
 registerMonsterType.description = function(mtype, mask)
 	if mask.description then
 		mtype:nameDescription(mask.description)
@@ -28,11 +23,6 @@ registerMonsterType.experience = function(mtype, mask)
 		mtype:experience(mask.experience)
 	end
 end
-registerMonsterType.skull = function(mtype, mask)
-	if mask.skull then
-		mtype:skull(mask.skull)
-	end
-end
 registerMonsterType.outfit = function(mtype, mask)
 	if mask.outfit then
 		mtype:outfit(mask.outfit)
@@ -41,13 +31,11 @@ end
 registerMonsterType.maxHealth = function(mtype, mask)
 	if mask.maxHealth then
 		mtype:maxHealth(mask.maxHealth)
-		mtype:health(math.min(mtype:health(), mask.maxHealth))
 	end
 end
 registerMonsterType.health = function(mtype, mask)
 	if mask.health then
 		mtype:health(mask.health)
-		mtype:maxHealth(math.max(mask.health, mtype:maxHealth()))
 	end
 end
 registerMonsterType.runHealth = function(mtype, mask)
@@ -82,46 +70,50 @@ registerMonsterType.corpse = function(mtype, mask)
 end
 registerMonsterType.flags = function(mtype, mask)
 	if mask.flags then
-		if mask.flags.attackable ~= nil then
+		if mask.flags.attackable then
 			mtype:isAttackable(mask.flags.attackable)
 		end
-		if mask.flags.healthHidden ~= nil then
+		if mask.flags.healthHidden then
 			mtype:isHealthHidden(mask.flags.healthHidden)
 		end
 		if mask.flags.boss ~= nil then
 			mtype:isBoss(mask.flags.boss)
 		end
-		if mask.flags.challengeable ~= nil then
-			mtype:isChallengeable(mask.flags.challengeable)
-		end
-		if mask.flags.convinceable ~= nil then
+		if mask.flags.convinceable then
 			mtype:isConvinceable(mask.flags.convinceable)
 		end
-		if mask.flags.summonable ~= nil then
-			mtype:isSummonable(mask.flags.summonable)
+		if mask.flags.illusionable then
+			mtype:isIllusionable(mask.flags.illusionable)
+		end
+		if mask.flags.hostile then
+			mtype:isHostile(mask.flags.hostile)
 		end
 		if mask.flags.ignoreSpawnBlock ~= nil then
 			mtype:isIgnoringSpawnBlock(mask.flags.ignoreSpawnBlock)
 		end
-		if mask.flags.illusionable ~= nil then
-			mtype:isIllusionable(mask.flags.illusionable)
-		end
-		if mask.flags.hostile ~= nil then
-			mtype:isHostile(mask.flags.hostile)
-		end
-		if mask.flags.pushable ~= nil then
+		if mask.flags.pushable then
 			mtype:isPushable(mask.flags.pushable)
 		end
-		if mask.flags.canPushItems ~= nil then
+		if mask.flags.canPushItems then
 			mtype:canPushItems(mask.flags.canPushItems)
 		end
-		if mask.flags.canPushCreatures ~= nil then
-			mtype:canPushCreatures(mask.flags.canPushCreatures)
+		if mask.flags.rewardboss then
+			mtype:isRewardBoss(mask.flags.rewardboss)
 		end
-		-- if a monster can push creatures,
-		-- it should not be pushable
+		if mask.flags.preyable then
+			mtype:isPreyable(mask.flags.preyable)
+		end
+		if mask.flags.pet then
+			mtype:isPet(mask.flags.pet)
+		end
+		if mask.flags.passive then
+			mtype:isPassive(mask.flags.passive)
+		end
+		if mask.flags.respawntype then
+			mtype:respawnType(mask.flags.respawntype)
+		end
 		if mask.flags.canPushCreatures then
-			mtype:isPushable(false)
+			mtype:canPushCreatures(mask.flags.canPushCreatures)
 		end
 		if mask.flags.targetDistance then
 			mtype:targetDistance(mask.flags.targetDistance)
@@ -129,20 +121,16 @@ registerMonsterType.flags = function(mtype, mask)
 		if mask.flags.staticAttackChance then
 			mtype:staticAttackChance(mask.flags.staticAttackChance)
 		end
-		if mask.flags.canWalkOnEnergy ~= nil then
-			mtype:canWalkOnEnergy(mask.flags.canWalkOnEnergy)
-		end
-		if mask.flags.canWalkOnFire ~= nil then
-			mtype:canWalkOnFire(mask.flags.canWalkOnFire)
-		end
-		if mask.flags.canWalkOnPoison ~= nil then
-			mtype:canWalkOnPoison(mask.flags.canWalkOnPoison)
-		end
 	end
 end
 registerMonsterType.light = function(mtype, mask)
 	if mask.light then
-		mtype:light(mask.light.color or 0, mask.light.level or 0)
+		if mask.light.color then
+			local color = mask.light.color
+		end
+		if mask.light.level then
+			mtype:light(color, mask.light.level)
+		end
 	end
 end
 registerMonsterType.changeTarget = function(mtype, mask)
@@ -155,9 +143,23 @@ registerMonsterType.changeTarget = function(mtype, mask)
 		end
 	end
 end
+registerMonsterType.immunityDamage = function(mtype, mask)
+	if mask.immunityDamage then
+		if mask.immunityDamage then
+			mtype:combatImmunities(mask.immunityDamage)
+		end
+	end
+end
+registerMonsterType.immunityCondition = function(mtype, mask)
+	if mask.immunityCondition then
+		if mask.immunityCondition then
+			mtype:conditionImmunities(mask.immunityCondition)
+		end
+	end
+end
 registerMonsterType.voices = function(mtype, mask)
 	if type(mask.voices) == "table" then
-		local interval, chance
+		local interval; local chance;
 		if mask.voices.interval then
 			interval = mask.voices.interval
 		end
@@ -208,6 +210,12 @@ registerMonsterType.loot = function(mtype, mask)
 			if loot.text or loot.description then
 				parent:setDescription(loot.text or loot.description)
 			end
+			if loot.unique then
+				loot:setUnique(loot.unique)
+			end
+			if loot.raid then
+				loot:setRaid(loot.raid)
+			end
 			if loot.child then
 				for _, children in pairs(loot.child) do
 					local child = Loot()
@@ -228,6 +236,12 @@ registerMonsterType.loot = function(mtype, mask)
 					end
 					if children.text or children.description then
 						child:setDescription(children.text or children.description)
+					end
+					if children.unique then
+						child:setUnique(children.unique)
+					end
+					if children.raid then
+						child:setRaid(children.raid)
 					end
 					parent:addChildLoot(child)
 				end
@@ -270,9 +284,6 @@ registerMonsterType.attacks = function(mtype, mask)
 					if attack.attack and attack.skill then
 						spell:setAttackValue(attack.attack, attack.skill)
 					end
-					if attack.minDamage and attack.maxDamage then
-						spell:setCombatValue(attack.minDamage, attack.maxDamage)
-					end
 					if attack.interval then
 						spell:setInterval(attack.interval)
 					end
@@ -283,7 +294,7 @@ registerMonsterType.attacks = function(mtype, mask)
 						if attack.condition.type then
 							spell:setConditionType(attack.condition.type)
 						end
-						local startDamage = 0
+						local startDamnage = 0
 						if attack.condition.startDamage then
 							startDamage = attack.condition.startDamage
 						end
@@ -319,13 +330,7 @@ registerMonsterType.attacks = function(mtype, mask)
 						spell:setConditionDuration(attack.duration)
 					end
 					if attack.speed then
-						if type(attack.speed) ~= "table" then
-							spell:setConditionSpeedChange(attack.speed)
-						elseif type(attack.speed) == "table" then
-							if attack.speed.min and attack.speed.max then
-								spell:setConditionSpeedChange(attack.speed.min, attack.speed.max)
-							end
-						end
+						spell:setConditionSpeedChange(attack.speed)
 					end
 					if attack.target then
 						spell:setNeedTarget(attack.target)
@@ -338,6 +343,9 @@ registerMonsterType.attacks = function(mtype, mask)
 					end
 					if attack.radius then
 						spell:setCombatRadius(attack.radius)
+					end
+					if attack.ring then
+						spell:setCombatRing(attack.ring)
 					end
 					if attack.minDamage and attack.maxDamage then
 						if attack.name == "combat" then
@@ -356,12 +364,6 @@ registerMonsterType.attacks = function(mtype, mask)
 					if attack.shootEffect then
 						spell:setCombatShootEffect(attack.shootEffect)
 					end
-					if attack.name == "drunk" then
-						spell:setConditionType(CONDITION_DRUNK)
-						if attack.drunkenness then
-							spell:setConditionDrunkenness(attack.drunkenness)
-						end
-					end
 				end
 			elseif attack.script then
 				spell:setScriptName(attack.script)
@@ -376,9 +378,6 @@ registerMonsterType.attacks = function(mtype, mask)
 				end
 				if attack.target then
 					spell:setNeedTarget(attack.target)
-				end
-				if attack.direction then
-					spell:setNeedDirection(attack.direction)
 				end
 			end
 			mtype:addAttack(spell)
@@ -402,9 +401,6 @@ registerMonsterType.defenses = function(mtype, mask)
 						if defense.attack and defense.skill then
 							spell:setAttackValue(defense.attack, defense.skill)
 						end
-						if defense.minDamage and defense.maxDamage then
-							spell:setCombatValue(defense.minDamage, defense.maxDamage)
-						end
 						if defense.interval then
 							spell:setInterval(defense.interval)
 						end
@@ -415,7 +411,7 @@ registerMonsterType.defenses = function(mtype, mask)
 							if defense.condition.type then
 								spell:setConditionType(defense.condition.type)
 							end
-							local startDamage = 0
+							local startDamnage = 0
 							if defense.condition.startDamage then
 								startDamage = defense.condition.startDamage
 							end
@@ -451,13 +447,7 @@ registerMonsterType.defenses = function(mtype, mask)
 							spell:setConditionDuration(defense.duration)
 						end
 						if defense.speed then
-							if type(defense.speed) ~= "table" then
-								spell:setConditionSpeedChange(defense.speed)
-							elseif type(defense.speed) == "table" then
-								if defense.speed.min and defense.speed.max then
-									spell:setConditionSpeedChange(defense.speed.min, defense.speed.max)
-								end
-							end
+							spell:setConditionSpeedChange(defense.speed)
 						end
 						if defense.target then
 							spell:setNeedTarget(defense.target)
@@ -470,6 +460,9 @@ registerMonsterType.defenses = function(mtype, mask)
 						end
 						if defense.radius then
 							spell:setCombatRadius(defense.radius)
+						end
+						if defense.ring then
+							spell:setCombatRing(defense.ring)
 						end
 						if defense.minDamage and defense.maxDamage then
 							if defense.name == "combat" then
@@ -502,9 +495,6 @@ registerMonsterType.defenses = function(mtype, mask)
 					end
 					if defense.target then
 						spell:setNeedTarget(defense.target)
-					end
-					if defense.direction then
-						spell:setNeedDirection(defense.direction)
 					end
 				end
 				mtype:addDefense(spell)

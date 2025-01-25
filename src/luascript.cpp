@@ -2153,6 +2153,8 @@ void LuaScriptInterface::registerFunctions()
 	registerMethod("Game", "getAccountStorageValue", LuaScriptInterface::luaGameGetAccountStorageValue);
 	registerMethod("Game", "setAccountStorageValue", LuaScriptInterface::luaGameSetAccountStorageValue);
 	registerMethod("Game", "saveAccountStorageValues", LuaScriptInterface::luaGameSaveAccountStorageValues);
+	registerMethod("Game", "getVocations", LuaScriptInterface::luaGameGetVocations);
+	
 
 	// Variant
 	registerClass("Variant", "", LuaScriptInterface::luaVariantCreate);
@@ -3981,7 +3983,7 @@ int LuaScriptInterface::luaIsScriptsInterface(lua_State* L)
 	if (getScriptEnv()->getScriptInterface() == &g_scripts->getScriptInterface()) {
 		pushBoolean(L, true);
 	} else {
-		reportErrorFunc(L, "EventCallback: can only be called inside (data/scripts/)");
+		reportErrorFunc(L, "Event: can only be called inside (data/scripts/)");
 		pushBoolean(L, false);
 	}
 	return 1;
@@ -4801,6 +4803,22 @@ int LuaScriptInterface::luaGameSaveAccountStorageValues(lua_State* L)
 	lua_pushboolean(L, g_game.saveAccountStorageValues());
 
 	return 1;
+}
+
+int LuaScriptInterface::luaGameGetVocations(lua_State* L)
+{
+    // Game.getVocations()
+    const auto& vocMap = g_vocations.getVocations();
+    lua_createtable(L, vocMap.size(), 0);
+
+    int index = 0;
+    for (const auto& vocEntry : vocMap) {
+        pushUserdata<Vocation>(L, const_cast<Vocation*>(&vocEntry.second));
+        setMetatable(L, -1, "Vocation");
+        lua_rawseti(L, -2, index++);
+    }
+
+    return 1;
 }
 
 // Variant
