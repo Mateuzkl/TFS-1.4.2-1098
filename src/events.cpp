@@ -108,6 +108,8 @@ bool Events::load()
 				info.playerOnNetworkMessage = event;
 			} else if (methodName == "onInventoryUpdate") {
 				info.playerOnInventoryUpdate = event;
+			} else if (methodName == "onUpdateStorage") {
+				info.playerOnUpdateStorage = event;
 			} else {
 				std::cout << "[Warning - Events::load] Unknown player method: " << methodName << std::endl;
 			}
