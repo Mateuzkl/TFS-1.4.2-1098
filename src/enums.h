@@ -260,6 +260,9 @@ enum ConditionParam_t {
 	CONDITION_PARAM_SPECIALSKILL_MANALEECHAMOUNT = 53,
 	CONDITION_PARAM_AGGRESSIVE = 54,
 	CONDITION_PARAM_DRUNKENNESS = 55,
+	CONDITION_PARAM_STAT_CAPACITY = 56,
+	CONDITION_PARAM_STAT_CAPACITYPERCENT = 57,
+	CONDITION_PARAM_STAT_VIBRANCY = 58,
 };
 
 enum BlockType_t : uint8_t {
@@ -290,9 +293,11 @@ enum stats_t {
 	STAT_MAXMANAPOINTS,
 	STAT_SOULPOINTS, // unused
 	STAT_MAGICPOINTS,
+	STAT_CAPACITY,
+	STAT_VIBRANCY,
 
 	STAT_FIRST = STAT_MAXHITPOINTS,
-	STAT_LAST = STAT_MAGICPOINTS
+	STAT_LAST = STAT_VIBRANCY
 };
 
 enum SpecialSkills_t {
@@ -484,6 +489,18 @@ enum MapMark_t
 	MAPMARK_GREENSOUTH = 19,
 };
 
+enum ConsoleMessageType : uint16_t {
+	CONSOLEMESSAGE_TYPE_INFO,
+	CONSOLEMESSAGE_TYPE_STARTUP,
+	CONSOLEMESSAGE_TYPE_STARTUP_SPECIAL,
+	CONSOLEMESSAGE_TYPE_WARNING,
+	CONSOLEMESSAGE_TYPE_ERROR,
+	CONSOLEMESSAGE_TYPE_BROADCAST,
+	CONSOLEMESSAGE_TYPE_RESPONSE,
+
+	CONSOLEMESSAGE_TYPE_LAST
+};
+
 struct Outfit_t {
 	uint16_t lookType = 0;
 	uint16_t lookTypeEx = 0;
@@ -493,6 +510,19 @@ struct Outfit_t {
 	uint8_t lookLegs = 0;
 	uint8_t lookFeet = 0;
 	uint8_t lookAddons = 0;
+};
+
+struct StaticImbuement_t {
+	const std::string name;
+	uint8_t slotId = 0;
+	uint16_t iconId = 0;
+	int32_t duration = 0;
+	bool isDecaying = false;
+};
+
+struct ItemImbuInfo_t {
+	uint8_t slotCount = 0;
+	std::vector<StaticImbuement_t> imbuements;
 };
 
 struct LightInfo {
@@ -574,6 +604,7 @@ enum CombatOrigin
 	ORIGIN_SPELL,
 	ORIGIN_MELEE,
 	ORIGIN_RANGED,
+	ORIGIN_CONVERTED, // imbuement damage conversion
 };
 
 struct CombatDamage

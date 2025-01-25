@@ -314,6 +314,7 @@ class ItemType
 		uint16_t rotateTo = 0;
 		int32_t runeMagLevel = 0;
 		int32_t runeLevel = 0;
+		uint8_t imbuingSlots = 0;
 
 		CombatType_t combatType = COMBAT_NONE;
 
@@ -406,6 +407,8 @@ class Items
 
 		bool loadFromXml();
 		void parseItemNode(const pugi::xml_node& itemNode, uint16_t id);
+
+		bool setImbuingSlots(size_t id, uint8_t count);
 
 		void buildInventoryList();
 		const InventoryVector& getInventory() const {

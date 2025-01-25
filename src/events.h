@@ -49,6 +49,9 @@ class Events
 		int32_t playerOnLoseExperience = -1;
 		int32_t playerOnGainSkillTries = -1;
 		int32_t playerOnWrapItem = -1;
+		int32_t playerOnImbuementApply = -1;
+		int32_t playerOnImbuementClear = -1;
+		int32_t playerOnImbuementExit = -1;
 
 		// Monster
 		int32_t monsterOnDropLoot = -1;
@@ -91,6 +94,11 @@ class Events
 		void eventPlayerOnLoseExperience(Player* player, uint64_t& exp);
 		void eventPlayerOnGainSkillTries(Player* player, skills_t skill, uint64_t& tries);
 		void eventPlayerOnWrapItem(Player* player, Item* item);
+
+
+		void eventPlayerOnImbuementApply(Player* player, uint8_t slotId, uint8_t imbuId, bool luckProtection);
+		void eventPlayerOnImbuementClear(Player* player, uint8_t slotId);
+		void eventPlayerOnImbuementExit(Player* player);
 
 		// Monster
 		void eventMonsterOnDropLoot(Monster* monster, Container* corpse);

@@ -2,7 +2,7 @@
 // Use of this source code is governed by the GPL-2.0 License that can be found in the LICENSE file.
 
 #include "otpch.h"
-
+#include "game.h"
 #include "items.h"
 #include "spells.h"
 #include "movement.h"
@@ -12,6 +12,7 @@
 
 extern MoveEvents* g_moveEvents;
 extern Weapons* g_weapons;
+extern Game g_game;
 
 const std::unordered_map<std::string, ItemParseAttributes_t> ItemParseAttributesMap = {
 	{"type", ITEM_PARSE_TYPE},
@@ -215,6 +216,24 @@ void Items::clear()
 
 bool Items::reload()
 {
+
+		std::cout << "[INFO] Reloading items ... " << std::endl;
+
+	// deequip bonuses
+	for (const auto& playerInfo : g_game.getPlayers()) {
+		Player* player = playerInfo.second;
+		if (player && !player->isRemoved()) {
+			for (int32_t slotId = CONST_SLOT_FIRST; slotId <= CONST_SLOT_LAST; ++slotId) {
+				slots_t slot = static_cast<slots_t>(slotId);
+				Item* item = player->getInventoryItem(slot);
+				if (item) {
+					player->toggleImbuements(item, false, true);
+					g_moveEvents->onPlayerDeEquip(player, item, slot);
+				}
+			}
+		}
+	}
+
 	clear();
 	loadFromOtb("data/items/items.otb");
 
@@ -225,6 +244,25 @@ bool Items::reload()
 	g_moveEvents->reload();
 	g_weapons->reload();
 	g_weapons->loadDefaults();
+
+	// equip bonuses again
+	for (const auto& playerInfo : g_game.getPlayers()) {
+		Player* player = playerInfo.second;
+		if (player && !player->isRemoved()) {
+			for (int32_t slotId = CONST_SLOT_FIRST; slotId <= CONST_SLOT_LAST; ++slotId) {
+				slots_t slot = static_cast<slots_t>(slotId);
+				Item* item = player->getInventoryItem(slot);
+				if (item) {
+					player->toggleImbuements(item, true, false);
+					g_moveEvents->onPlayerEquip(player, item, slot, false);
+				}
+			}
+
+			// send updated imbu panel
+			player->sendImbuementsPanel();
+		}
+	}
+
 	return true;
 }
 
@@ -1370,6 +1408,15 @@ void Items::parseItemNode(const pugi::xml_node& itemNode, uint16_t id)
 	if ((it.transformToFree != 0 || it.transformToOnUse[PLAYERSEX_FEMALE] != 0 || it.transformToOnUse[PLAYERSEX_MALE] != 0) && it.type != ITEM_TYPE_BED) {
 		std::cout << "[Warning - Items::parseItemNode] Item " << it.id << " is not set as a bed-type" << std::endl;
 	}
+}
+
+bool Items::setImbuingSlots(size_t id, uint8_t slotCount) {
+	if (id > 99 && id < items.size()) {
+		items[id].imbuingSlots = slotCount;
+		return true;
+	}
+
+	return false;
 }
 
 ItemType& Items::getItemType(size_t id)

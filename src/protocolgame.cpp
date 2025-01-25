@@ -25,6 +25,7 @@ extern ConfigManager g_config;
 extern Actions actions;
 extern CreatureEvents* g_creatureEvents;
 extern Chat* g_chat;
+extern Game g_game;
 
 namespace {
 
@@ -491,6 +492,7 @@ void ProtocolGame::parsePacket(NetworkMessage& msg)
 		case 0x1D: addGameTask(&Game::playerReceivePingBack, player->getID()); break;
 		case 0x1E: addGameTask(&Game::playerReceivePing, player->getID()); break;
 		case 0x32: parseExtendedOpcode(msg); break; //otclient extended opcode
+		case 0x60: parseImbuementPanel(msg); break;
 		case 0x64: parseAutoWalk(msg); break;
 		case 0x65: addGameTask(&Game::playerMove, player->getID(), DIRECTION_NORTH); break;
 		case 0x66: addGameTask(&Game::playerMove, player->getID(), DIRECTION_EAST); break;
@@ -553,6 +555,9 @@ void ProtocolGame::parsePacket(NetworkMessage& msg)
 		case 0xD2: addGameTask(&Game::playerRequestOutfit, player->getID()); break;
 		case 0xD3: parseSetOutfit(msg); break;
 		case 0xD4: parseToggleMount(msg); break;
+		case 0xD5: parseImbuingApply(msg); break; // apply imbu
+		case 0xD6: addGameTask(([=, playerID = player->getID(), slotId = msg.getByte()]() { g_game.playerImbuingClear(playerID, slotId); })); break; // clear imbu
+		case 0xD7: addGameTask([playerID = player->getID()]() { g_game.playerImbuingExit(playerID); }); break; // close ui
 		case 0xDC: parseAddVip(msg); break;
 		case 0xDD: parseRemoveVip(msg); break;
 		case 0xDE: parseEditVip(msg); break;
@@ -1228,6 +1233,21 @@ void ProtocolGame::parseSeekInContainer(NetworkMessage& msg)
 	uint8_t containerId = msg.getByte();
 	uint16_t index = msg.get<uint16_t>();
 	addGameTask(&Game::playerSeekInContainer, player->getID(), containerId, index);
+}
+
+void ProtocolGame::parseImbuingApply(NetworkMessage& msg)
+{
+	uint8_t slotId = msg.getByte();
+	uint8_t imbuId = msg.getByte();
+	msg.skipBytes(3); // imbuId is u32, but we use one byte only
+	bool luckProtection = msg.getByte() != 0;
+	addGameTask(([=, playerID = player->getID()]() { g_game.playerImbuingApply(playerID, slotId, imbuId, luckProtection); }));
+}
+
+void ProtocolGame::parseImbuementPanel(NetworkMessage& msg)
+{
+	bool enabled = msg.getByte() != 0x00;
+	addGameTask(([=, playerID = player->getID()]() { g_game.playerToggleImbuPanel(playerID, enabled); }));
 }
 
 // Send methods
@@ -2900,6 +2920,46 @@ void ProtocolGame::sendSpellGroupCooldown(SpellGroup_t groupId, uint32_t time)
 	msg.addByte(0xA5);
 	msg.addByte(groupId);
 	msg.add<uint32_t>(time);
+	writeToOutputBuffer(msg);
+}
+
+void ProtocolGame::sendImbuementsPanel(const std::map<slots_t, Item*> itemsToSend)
+{
+	if (!player || player->isRemoved()) {
+		return;
+	}
+
+	NetworkMessage msg;
+	msg.addByte(0x5D);
+	msg.addByte(itemsToSend.size());
+	for (const auto& it : itemsToSend) {
+		msg.addByte(it.first);
+		msg.addItem(it.second);
+
+		ItemImbuInfo_t imbuInfo = it.second->getStaticImbuements(player->hasCondition(CONDITION_INFIGHT) && player->getZone() != ZONE_PROTECTION);
+
+		msg.addByte(imbuInfo.slotCount);
+		for (uint8_t slotId = 0; slotId < imbuInfo.slotCount; ++slotId) {
+			bool found = false;
+			for (const auto& imbuData : imbuInfo.imbuements) {
+				if (!found && slotId == imbuData.slotId) {
+					// occupied slot
+					msg.addByte(0x01);
+					msg.addString(imbuData.name);
+					msg.add<uint16_t>(imbuData.iconId);
+					msg.add<int32_t>(imbuData.duration);
+					msg.addByte(imbuData.isDecaying ? 0x01 : 0x00);
+					found = true;
+				}
+			}
+
+			if (!found) {
+				// empty slot
+				msg.addByte(0x00);
+			}
+		}
+	}
+
 	writeToOutputBuffer(msg);
 }
 

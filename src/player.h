@@ -96,6 +96,10 @@ using MuteCountMap = std::map<uint32_t, uint32_t>;
 static constexpr int32_t PLAYER_MAX_SPEED = 1500;
 static constexpr int32_t PLAYER_MIN_SPEED = 10;
 
+// standard exhaust for client requests
+static constexpr int32_t UI_ACTION_INTERVAL_LIGHT = 500;
+static constexpr int32_t UI_ACTION_INTERVAL_HEAVY = 2000;
+
 class Player final : public Creature, public Cylinder
 {
 	public:
@@ -688,6 +692,16 @@ class Player final : public Creature, public Cylinder
 		size_t getMaxVIPEntries() const;
 		size_t getMaxDepotItems() const;
 
+		// imbuements
+		void consumeImbuements(bool consumeDuration = false, bool consumeInfight = false) {
+			for (uint8_t slot = CONST_SLOT_FIRST; slot <= CONST_SLOT_LAST; ++slot) {
+				Item* slotItem = getInventoryItem(static_cast<slots_t>(slot));
+				if (slotItem) {
+					slotItem->refreshImbuements(this, consumeDuration, consumeInfight);
+				}
+			}
+		}
+
 		//tile
 		//send methods
 		void sendAddTileItem(const Tile* tile, const Position& pos, const Item* item) {
@@ -838,6 +852,20 @@ class Player final : public Creature, public Cylinder
 			}
 		}
 		void sendModalWindow(const ModalWindow& modalWindow);
+
+		void sendImbuementsPanel() {
+			if (client && imbuPanelOn) {
+				std::map<slots_t, Item*> itemsToSend;
+				for (uint8_t slot = CONST_SLOT_FIRST; slot < CONST_SLOT_LAST; ++slot) {
+					Item* slotItem = inventory[static_cast<slots_t>(slot)];
+					if (slotItem && slotItem->getImbuingSlots() > 0) {
+						itemsToSend[static_cast<slots_t>(slot)] = slotItem;
+					}
+				}
+
+				client->sendImbuementsPanel(itemsToSend);
+			}
+		}
 
 		//container
 		void sendAddContainerItem(const Container* container, const Item* item);
@@ -1135,6 +1163,26 @@ class Player final : public Creature, public Cylinder
 		}
 		uint32_t getNextActionTime() const;
 
+		// ui click exhaust
+		void setNextLightUIAction() {
+			if (UI_ACTION_INTERVAL_LIGHT > nextLightUIAction) {
+				nextLightUIAction = OTSYS_TIME() + UI_ACTION_INTERVAL_LIGHT;
+			}
+		}
+		bool canDoLightUIAction() const {
+			return nextLightUIAction <= OTSYS_TIME();
+		}
+
+		// ui click exhaust for heavy operations
+		void setNextHeavyUIAction() {
+			if (UI_ACTION_INTERVAL_HEAVY > nextHeavyUIAction) {
+				nextHeavyUIAction = OTSYS_TIME() + UI_ACTION_INTERVAL_HEAVY;
+			}
+		}
+		bool canDoHeavyUIAction() const {
+			return nextHeavyUIAction <= OTSYS_TIME();
+		}
+
 		Item* getWriteItem(uint32_t& windowTextId, uint16_t& maxWriteLen);
 		void setWriteItem(Item* item, uint16_t maxWriteLen = 0);
 
@@ -1146,6 +1194,10 @@ class Player final : public Creature, public Cylinder
 		bool hasLearnedInstantSpell(const std::string& spellName) const;
 
 		void updateRegeneration();
+
+		void toggleImbuement(uint8_t imbuId, bool isEquip);
+		void toggleImbuements(Item* item, bool isEquip, bool silent = false);
+		void toggleImbuPanel(bool enabled);
 
 	private:
 		std::forward_list<Condition*> getMuteConditions() const;
@@ -1236,6 +1288,8 @@ class Player final : public Creature, public Cylinder
 		int64_t lastPing;
 		int64_t lastPong;
 		int64_t nextAction = 0;
+		int64_t nextLightUIAction = 0; // lightweight UI operations - short cooldowns
+		int64_t nextHeavyUIAction = 0; // heavy UI operations - longer cooldowns
 
 		BedItem* bedItem = nullptr;
 		Guild* guild = nullptr;
@@ -1311,6 +1365,7 @@ class Player final : public Creature, public Cylinder
 		bool isConnecting = false;
 		bool addAttackSkillPoint = false;
 		bool inventoryAbilities[CONST_SLOT_LAST + 1] = {};
+		bool imbuPanelOn = false;
 
 		static uint32_t playerAutoID;
 

@@ -9,6 +9,7 @@
 #include "creature.h"
 #include "tasks.h"
 
+
 class NetworkMessage;
 class Player;
 class Game;
@@ -127,6 +128,10 @@ class ProtocolGame final : public Protocol
 		void parseRequestTrade(NetworkMessage& msg);
 		void parseLookInTrade(NetworkMessage& msg);
 
+		// Imbuing
+		void parseImbuingApply(NetworkMessage& msg);
+		void parseImbuementPanel(NetworkMessage& msg);
+
 		//market methods
 		void parseMarketLeave();
 		void parseMarketBrowse(NetworkMessage& msg);
@@ -226,6 +231,7 @@ class ProtocolGame final : public Protocol
 
 		void sendSpellCooldown(uint8_t spellId, uint32_t time);
 		void sendSpellGroupCooldown(SpellGroup_t groupId, uint32_t time);
+		void sendImbuementsPanel(const std::map<slots_t, Item*> itemsToSend);
 
 		//tiles
 		void sendMapDescription(const Position& pos);
@@ -292,15 +298,27 @@ class ProtocolGame final : public Protocol
 		friend class Player;
 
 		// Helpers so we don't need to bind every time
-		template <typename Callable, typename... Args>
-		void addGameTask(Callable&& function, Args&&... args) {
-			g_dispatcher.addTask(createTask(std::bind(std::forward<Callable>(function), &g_game, std::forward<Args>(args)...)));
+		template <typename Callable>
+		void addGameTask(Callable&& function) {
+			g_dispatcher.addTask(createTask(std::function<void()>(std::forward<Callable>(function))));
 		}
 
 		template <typename Callable, typename... Args>
-		void addGameTaskTimed(uint32_t delay, Callable&& function, Args&&... args) {
-			g_dispatcher.addTask(createTask(delay, std::bind(std::forward<Callable>(function), &g_game, std::forward<Args>(args)...)));
+		void addGameTask(Callable&& function, Args&&... args) {
+			g_dispatcher.addTask(createTask(
+				std::function<void()>(
+					std::bind(std::forward<Callable>(function), &g_game, std::forward<Args>(args)...)
+				)
+			));
 		}
+		
+		template <typename Callable, typename... Args>
+		void addGameTaskTimed(uint32_t delay, Callable&& function, Args&&... args) {
+			g_dispatcher.addTask(createTask(delay, static_cast<std::function<void()>>(
+				std::bind(std::forward<Callable>(function), &g_game, std::forward<Args>(args)...)
+			)));
+		}
+
 
 		std::unordered_set<uint32_t> knownCreatureSet;
 		Player* player = nullptr;

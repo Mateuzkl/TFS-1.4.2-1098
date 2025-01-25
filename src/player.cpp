@@ -20,6 +20,7 @@
 
 extern ConfigManager g_config;
 extern Game g_game;
+extern Imbuements g_imbuements;
 extern Chat* g_chat;
 extern Vocations g_vocations;
 extern MoveEvents* g_moveEvents;
@@ -850,6 +851,12 @@ void Player::sendPing()
 {
 	int64_t timeNow = OTSYS_TIME();
 
+	// refresh imbuements
+	if (timeNow % 60 == 0) {
+		consumeImbuements(true, getZone() != ZONE_PROTECTION && hasCondition(CONDITION_INFIGHT));
+		sendImbuementsPanel();
+	}
+
 	bool hasLostConnection = false;
 	if ((timeNow - lastPing) >= 5000) {
 		lastPing = timeNow;
@@ -1061,6 +1068,7 @@ void Player::onCreatureAppear(Creature* creature, bool isLogin)
 		for (int32_t slot = CONST_SLOT_FIRST; slot <= CONST_SLOT_LAST; ++slot) {
 			Item* item = inventory[slot];
 			if (item) {
+				toggleImbuements(item, true, true);
 				item->startDecaying();
 				g_moveEvents->onPlayerEquip(this, item, static_cast<slots_t>(slot), false);
 			}
@@ -1139,11 +1147,18 @@ void Player::onChangeZone(ZoneType_t zone)
 			g_game.internalCreatureChangeOutfit(this, defaultOutfit);
 			wasMounted = true;
 		}
+		// pause imbuements
+		consumeImbuements(true, hasCondition(CONDITION_INFIGHT));
+		sendImbuementsPanel();
 	} else {
 		if (wasMounted) {
 			toggleMount(true);
 			wasMounted = false;
 		}
+
+		// resume imbuements
+		consumeImbuements(true, false);
+		sendImbuementsPanel();
 	}
 
 	g_game.updateCreatureWalkthrough(this);
@@ -2998,6 +3013,13 @@ void Player::postAddNotification(Thing* thing, const Cylinder* oldParent, int32_
 	if (link == LINK_OWNER) {
 		//calling movement scripts
 		g_moveEvents->onPlayerEquip(this, thing->getItem(), static_cast<slots_t>(index), false);
+
+	// equip - refresh imbuements without consuming duration
+		if (Item* item = thing->getItem()) {
+			item->refreshImbuements(this);
+			toggleImbuements(item, true);
+		}
+		sendImbuementsPanel();
 	}
 
 	bool requireListUpdate = false;
@@ -3356,6 +3378,10 @@ void Player::onAddCondition(ConditionType_t type)
 
 	if (type == CONDITION_OUTFIT && isMounted()) {
 		dismount();
+		} else if (type == CONDITION_INFIGHT && getZone() != ZONE_PROTECTION) {
+		// infight started - update timers, consume outofcombat durations
+		consumeImbuements(true, false);
+		sendImbuementsPanel();
 	}
 
 	sendIcons();
@@ -3413,6 +3439,9 @@ void Player::onEndCondition(ConditionType_t type)
 		if (getSkull() != SKULL_RED && getSkull() != SKULL_BLACK) {
 			setSkull(SKULL_NONE);
 		}
+		// combat ended, update all imbu durations
+		consumeImbuements(true, getZone() != ZONE_PROTECTION);
+		sendImbuementsPanel();
 	}
 
 	sendIcons();
@@ -4613,4 +4642,99 @@ void Player::updateRegeneration()
 		condition->setParam(CONDITION_PARAM_MANAGAIN, vocation->getManaGainAmount());
 		condition->setParam(CONDITION_PARAM_MANATICKS, vocation->getManaGainTicks() * 1000);
 	}
+}
+
+void Player::toggleImbuement(uint8_t imbuId, bool isEquip)
+{
+	if (imbuId == 0) {
+		return;
+	}
+
+	// equip - add stats
+	// deEquip - substract
+	int32_t equip = isEquip ? 1 : -1;
+
+	ImbuementType* imbuementType = g_imbuements.getImbuementType(imbuId);
+	ImbuingTypes type = static_cast<ImbuingTypes>(imbuementType->getType());
+
+	int32_t primary = imbuementType->getPrimaryValue();
+	if (type != IMBUING_TYPE_SKILLBOOST) {
+		primary *= equip;
+	}
+	int32_t secondary = imbuementType->getSecondaryValue() * equip;
+
+	switch (type) {
+		case IMBUING_TYPE_CRIT:
+			setVarSpecialSkill(SPECIALSKILL_CRITICALHITAMOUNT, primary);
+			setVarSpecialSkill(SPECIALSKILL_CRITICALHITCHANCE, secondary);
+			break;
+
+		case IMBUING_TYPE_LEECH_MANA:
+			setVarSpecialSkill(SPECIALSKILL_MANALEECHAMOUNT, primary);
+			setVarSpecialSkill(SPECIALSKILL_MANALEECHCHANCE, secondary);
+			break;
+
+		case IMBUING_TYPE_LEECH_HP:
+			setVarSpecialSkill(SPECIALSKILL_LIFELEECHAMOUNT, primary);
+			setVarSpecialSkill(SPECIALSKILL_LIFELEECHCHANCE, secondary);
+			break;
+
+		case IMBUING_TYPE_SKILLBOOST:
+			if (static_cast<skills_t>(primary) != SKILL_MAGLEVEL) {
+				setVarSkill(static_cast<skills_t>(primary), secondary);
+			} else {
+				setVarStats(STAT_MAGICPOINTS, secondary);
+			}
+			break;
+
+		case IMBUING_TYPE_SPEED:
+			g_game.changeSpeed(this, primary * 2);
+			break;
+
+		case IMBUING_TYPE_CAPACITY:
+			setVarStats(STAT_CAPACITY, static_cast<int32_t>(std::round(getFreeCapacity() * (primary / 100.))));
+			break;
+
+		case IMBUING_TYPE_DEFLECT_PARALYZE:
+			// handled in: imbuing.lua -> onAddCondition
+			setVarStats(STAT_VIBRANCY, primary);
+			break;
+
+		// do nothing
+		//case IMBUING_TYPE_NONE: // empty/incomplete
+		//case IMBUING_TYPE_DAMAGE: // handled in Game::combatBlockHit
+		//case IMBUING_TYPE_PROTECTION: // handled in Player::blockHit
+		//case IMBUING_TYPE_SCRIPT: // not implemented
+		default: // invalid
+			break;
+	}
+}
+
+void Player::toggleImbuements(Item* item, bool isEquip, bool silent)
+{
+	// invalid or never customized item
+	if (!item || !item->hasAttributes()) {
+		return;
+	}
+
+	bool needUpdate = false;
+
+	const std::map<uint8_t, Imbuement>& itemImbuements = item->getImbuements();
+	for (const auto& imbuement : itemImbuements) {
+		int32_t duration = imbuement.second.getDuration();
+		if (duration > 0 || duration == -1) {
+			toggleImbuement(imbuement.second.getImbuId(), isEquip);
+			needUpdate = true;
+		}
+	}
+
+	if (needUpdate && !silent) {
+		sendStats();
+		sendSkills();
+	}
+}
+
+void Player::toggleImbuPanel(bool enabled)
+{
+	imbuPanelOn = enabled;
 }
