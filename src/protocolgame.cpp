@@ -1616,6 +1616,12 @@ void ProtocolGame::sendCloseShop()
 
 void ProtocolGame::sendSaleItemList(const std::list<ShopInfo>& shop)
 {
+
+	uint64_t playerBank = player->getBankBalance();
+	uint64_t playerMoney = player->getMoney();
+	sendResourceBalance(RESOURCE_BANK_BALANCE, playerBank);
+	sendResourceBalance(RESOURCE_GOLD_EQUIPPED, playerMoney);
+
 	NetworkMessage msg;
 	msg.addByte(0x7B);
 	msg.add<uint64_t>(player->getMoney() + player->getBankBalance());
@@ -1691,6 +1697,47 @@ void ProtocolGame::sendSaleItemList(const std::list<ShopInfo>& shop)
 		msg.addItemId(it->first);
 		msg.addByte(std::min<uint32_t>(it->second, std::numeric_limits<uint8_t>::max()));
 	}
+
+	writeToOutputBuffer(msg);
+}
+
+void ProtocolGame::sendResourceBalance(const ResourceTypes_t resourceType, uint64_t amount)
+{
+	NetworkMessage msg;
+	msg.addByte(0xEE);
+	msg.addByte(resourceType);
+	if (resourceType == RESOURCE_CHARM_POINTS) {
+		msg.add<uint32_t>(amount);
+	} else {
+		// fix overflow in forge UI
+		switch(resourceType) {
+			case RESOURCE_FORGE_DUST:
+				amount = std::min<uint64_t>(std::numeric_limits<uint8_t>::max(), amount);
+				break;
+			case RESOURCE_FORGE_SLIVERS:
+			case RESOURCE_FORGE_CORES:
+				amount = std::min<uint64_t>(std::numeric_limits<uint16_t>::max(), amount);
+				break;
+			default:
+				break;
+		}
+
+		msg.add<uint64_t>(amount);
+	}
+
+	writeToOutputBuffer(msg);
+}
+
+void ProtocolGame::sendStoreBalance()
+{
+	// dispatcher thread only
+
+	// send balance
+	NetworkMessage msg;
+
+	// header
+	msg.addByte(0xDF);
+	msg.addByte(0x01);
 
 	writeToOutputBuffer(msg);
 }

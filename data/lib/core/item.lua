@@ -524,6 +524,11 @@ do
 				ss:append('%.2f oz.', weight / 100)
 			end
 		end
+		
+		-- imbuements
+		if ImbuingSystem then
+			response[#response + 1] = item:getImbuementsDescription()
+		end
 
 		local desc = it:getDescription()
 		if item then
@@ -565,4 +570,37 @@ do
 	else
 		Item.getDescription = oldItemDesc
 	end
+end
+
+function Item:getRelativePosition(player)
+	local topParent = self:getTopParent()
+	if topParent then
+		if topParent:isPlayer() then
+			local parent = self:getParent()
+			if parent then
+				if parent:isPlayer() then
+					for slotId = CONST_SLOT_FIRST, CONST_SLOT_LAST do
+						if self == player:getSlotItem(slotId) then
+							return Position(CONTAINER_POSITION, slotId, 0)
+						end
+					end
+				elseif parent:isContainer() then
+					local contId = player:getContainerId(parent)
+					if contId and contId > -1 then
+						for index, item in pairs(parent:getItems()) do
+							if self == item then
+								return Position(CONTAINER_POSITION, 64 + contId, index - 1)
+							end
+						end
+					end
+				end
+				
+				return false
+			end
+		elseif topParent:isTile() then
+			return self:getPosition()
+		end
+	end
+
+	return false
 end

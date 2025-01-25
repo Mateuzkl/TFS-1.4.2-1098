@@ -769,6 +769,16 @@ class Player final : public Creature, public Cylinder
 				}
 			}
 		}
+		void sendResourceBalance(ResourceTypes_t resourceType, uint64_t amount) {
+			if (client) {
+				client->sendResourceBalance(resourceType, amount);
+			}
+		}
+		void sendStoreBalance() {
+			if (client) {
+				client->sendStoreBalance();
+			}
+		}
 		void sendCreatureSay(const Creature* creature, SpeakClasses type, const std::string& text, const Position* pos = nullptr) {
 			if (client) {
 				client->sendCreatureSay(creature, type, text, pos);
