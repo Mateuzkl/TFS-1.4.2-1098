@@ -1,4 +1,5 @@
-function onStepIn(creature, item, position, fromPosition)
+local questDoor = MoveEvent()
+function questDoor.onStepIn(creature, item, position, fromPosition)
 	if not creature:isPlayer() then
 		return false
 	end
@@ -10,3 +11,8 @@ function onStepIn(creature, item, position, fromPosition)
 	end
 	return true
 end
+for _, i in ipairs(openQuestDoors) do
+	questDoor:id(i)
+end
+questDoor:type("stepin")
+questDoor:register()
