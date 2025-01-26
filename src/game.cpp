@@ -1103,6 +1103,17 @@ ReturnValue Game::internalMoveItem(Cylinder* fromCylinder, Cylinder* toCylinder,
 		return RETURNVALUE_NOERROR; //silently ignore move
 	}
 
+	if (Container* toContainer = dynamic_cast<Container*>(toCylinder)) {
+		if (toContainer->isRewardCorpse() || toContainer->getID() == ITEM_REWARD_CONTAINER) {
+			return RETURNVALUE_NOTPOSSIBLE;
+		}
+	}
+	if (Container* itemContainer = dynamic_cast<Container*>(item)) {
+		if (itemContainer->isRewardCorpse() || item->getID() == ITEM_REWARD_CONTAINER) {
+			return RETURNVALUE_NOERROR; // silently ignore move
+		}
+	}
+
 	//check if we can add this item
 	ReturnValue ret = toCylinder->queryAdd(index, *item, count, flags, actor);
 	if (ret == RETURNVALUE_NEEDEXCHANGE) {
@@ -3984,6 +3995,22 @@ bool Game::combatChangeHealth(Creature* attacker, Creature* target, CombatDamage
 		target->gainHealth(attacker, damage.primary.value);
 		realHealthChange = target->getHealth() - realHealthChange;
 
+		// rewardboss healing contribution
+		if (target && target->getPlayer()) {
+			for (const auto& [monsterId, rewardInfo] : g_game.rewardBossTracking) {
+				Monster* monster = getMonsterByID(monsterId);
+				if (monster && monster->isRewardBoss()) {
+					const Position& targetPos = target->getPosition();
+					const Position& monsterPos = monster->getPosition();
+					double distBetweenTargetAndBoss = std::sqrt(std::pow(targetPos.x - monsterPos.x, 2) + std::pow(targetPos.y - monsterPos.y, 2));
+					if (distBetweenTargetAndBoss < 7) {
+						uint32_t playerGuid = target->getPlayer()->getGUID();
+						rewardBossTracking[monsterId].playerScoreTable[playerGuid].damageTaken += realHealthChange * g_config.getFloat(ConfigManager::REWARD_RATE_HEALING_DONE);
+					}
+				}
+			}
+		}
+
 		if (realHealthChange > 0 && !target->isInGhostMode()) {
 			auto damageString = fmt::format("{:d} hitpoint{:s}", realHealthChange, realHealthChange != 1 ? "s" : "");
 
@@ -4219,6 +4246,29 @@ bool Game::combatChangeHealth(Creature* attacker, Creature* target, CombatDamage
 					message.text = spectatorMessage;
 				}
 				tmpPlayer->sendTextMessage(message);
+			}
+		}
+
+			// rewardboss player attacking boss
+		if (target && target->getMonster() && target->getMonster()->isRewardBoss()) {
+			uint32_t monsterId = target->getMonster()->getID();
+			if (rewardBossTracking.find(monsterId) == rewardBossTracking.end()) {
+				rewardBossTracking[monsterId] = RewardBossContributionInfo();
+			}
+			if (attacker->getPlayer()) {
+				uint32_t playerGuid = attacker->getPlayer()->getGUID();
+				rewardBossTracking[monsterId].playerScoreTable[playerGuid].damageDone += realDamage * g_config.getFloat(ConfigManager::REWARD_RATE_DAMAGE_DONE);
+			}
+		}
+		// rewardboss boss attacking player
+		if (attacker && attacker->getMonster() && attacker->getMonster()->isRewardBoss()) {
+			uint32_t monsterId = attacker->getMonster()->getID();
+			if (rewardBossTracking.find(monsterId) == rewardBossTracking.end()) {
+				rewardBossTracking[monsterId] = RewardBossContributionInfo();
+			}
+			if (target->getPlayer()) {
+				uint32_t playerGuid = target->getPlayer()->getGUID();
+				rewardBossTracking[monsterId].playerScoreTable[playerGuid].damageTaken += realDamage * g_config.getFloat(ConfigManager::REWARD_RATE_DAMAGE_TAKEN);
 			}
 		}
 
@@ -5672,6 +5722,11 @@ void Game::removeUniqueItem(uint16_t uniqueId)
 	if (it != uniqueItems.end()) {
 		uniqueItems.erase(it);
 	}
+}
+
+void Game::resetDamageTracking(uint32_t monsterId)
+{
+	rewardBossTracking.erase(monsterId);
 }
 
 bool Game::reload(ReloadTypes_t reloadType)

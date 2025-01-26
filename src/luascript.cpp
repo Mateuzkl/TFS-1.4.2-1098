@@ -1437,6 +1437,7 @@ void LuaScriptInterface::registerEnums()
 	registerEnum(ITEM_ATTRIBUTE_ATTACK_SPEED)
 	registerEnum(ITEM_ATTRIBUTE_CLASSIFICATION)
 	registerEnum(ITEM_ATTRIBUTE_TIER)
+	registerEnum(ITEM_ATTRIBUTE_REWARDID)
 	registerEnum(ITEM_ATTRIBUTE_DEFENSE)
 	registerEnum(ITEM_ATTRIBUTE_EXTRADEFENSE)
 	registerEnum(ITEM_ATTRIBUTE_ARMOR)
@@ -1507,6 +1508,7 @@ void LuaScriptInterface::registerEnums()
 	registerEnum(ITEM_WILDGROWTH)
 	registerEnum(ITEM_WILDGROWTH_PERSISTENT)
 	registerEnum(ITEM_WILDGROWTH_SAFE)
+	registerEnum(ITEM_REWARD_CONTAINER)
 
 	registerEnum(WIELDINFO_NONE)
 	registerEnum(WIELDINFO_LEVEL)
@@ -2061,6 +2063,11 @@ void LuaScriptInterface::registerFunctions()
 	registerEnumIn("configKeys", ConfigManager::EXP_FROM_PLAYERS_LEVEL_RANGE)
 	registerEnumIn("configKeys", ConfigManager::MAX_PACKETS_PER_SECOND)
 
+	registerEnumIn("configKeys", ConfigManager::REWARD_BASE_RATE);
+	registerEnumIn("configKeys", ConfigManager::REWARD_RATE_DAMAGE_DONE);
+	registerEnumIn("configKeys", ConfigManager::REWARD_RATE_DAMAGE_TAKEN);
+	registerEnumIn("configKeys", ConfigManager::REWARD_RATE_HEALING_DONE);
+
 	// os
 	registerMethod("os", "mtime", LuaScriptInterface::luaSystemTime);
 
@@ -2417,6 +2424,8 @@ void LuaScriptInterface::registerFunctions()
 
 	registerMethod("Player", "getDepotChest", LuaScriptInterface::luaPlayerGetDepotChest);
 	registerMethod("Player", "getInbox", LuaScriptInterface::luaPlayerGetInbox);
+
+	registerMethod("Player", "getRewardChest", LuaScriptInterface::luaPlayerGetRewardChest);
 
 	registerMethod("Player", "getSkullTime", LuaScriptInterface::luaPlayerGetSkullTime);
 	registerMethod("Player", "setSkullTime", LuaScriptInterface::luaPlayerSetSkullTime);
@@ -2853,6 +2862,7 @@ void LuaScriptInterface::registerFunctions()
 	registerMethod("MonsterType", "isPushable", LuaScriptInterface::luaMonsterTypeIsPushable);
 	registerMethod("MonsterType", "isHealthHidden", LuaScriptInterface::luaMonsterTypeIsHealthHidden);
 	registerMethod("MonsterType", "isBoss", LuaScriptInterface::luaMonsterTypeIsBoss);
+	registerMethod("MonsterType", "isRewardBoss", LuaScriptInterface::luaMonsterTypeIsRewardBoss);
 
 	registerMethod("MonsterType", "canPushItems", LuaScriptInterface::luaMonsterTypeCanPushItems);
 	registerMethod("MonsterType", "canPushCreatures", LuaScriptInterface::luaMonsterTypeCanPushCreatures);
@@ -8378,6 +8388,23 @@ int LuaScriptInterface::luaPlayerGetInbox(lua_State* L)
 	return 1;
 }
 
+int LuaScriptInterface::luaPlayerGetRewardChest(lua_State* L)
+{
+    // player:getRewardChest()
+    Player* player = getUserdata<Player>(L, 1);
+    if (!player) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    RewardChest& rewardChest = player->getRewardChest();
+    
+    pushUserdata<Item>(L, &rewardChest);
+    setItemMetatable(L, -1, &rewardChest);
+
+    return 1;
+}
+
 int LuaScriptInterface::luaPlayerGetSkullTime(lua_State* L)
 {
 	// player:getSkullTime()
@@ -13256,6 +13283,23 @@ int LuaScriptInterface::luaMonsterTypeIsBoss(lua_State* L)
 			pushBoolean(L, monsterType->info.isBoss);
 		} else {
 			monsterType->info.isBoss = getBoolean(L, 2);
+			pushBoolean(L, true);
+		}
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+int LuaScriptInterface::luaMonsterTypeIsRewardBoss(lua_State* L)
+{
+	// monsterType:isRewardBoss()
+	MonsterType* monsterType = getUserdata<MonsterType>(L, 1);
+	if (monsterType) {
+		if (lua_gettop(L) == 1) {
+			pushBoolean(L, monsterType->info.isRewardBoss);
+		} else {
+			monsterType->info.isRewardBoss = getBoolean(L, 2);
 			pushBoolean(L, true);
 		}
 	} else {

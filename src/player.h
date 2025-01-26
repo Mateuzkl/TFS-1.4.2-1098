@@ -20,6 +20,7 @@
 #include "town.h"
 #include "mounts.h"
 #include "storeinbox.h"
+#include "rewardchest.h"
 
 
 class House;
@@ -499,6 +500,8 @@ class Player final : public Creature, public Cylinder
 
 		DepotChest* getDepotChest(uint32_t depotId, bool autoCreate);
 		DepotLocker* getDepotLocker(uint32_t depotId);
+
+		RewardChest& getRewardChest();
 		void onReceiveMail() const;
 		bool isNearDepotBox() const;
 
@@ -1244,6 +1247,7 @@ class Player final : public Creature, public Cylinder
 		Town* town = nullptr;
 		Vocation* vocation = nullptr;
 		StoreInbox* storeInbox = nullptr;
+		std::shared_ptr<RewardChest> rewardChest = nullptr;
 
 		uint32_t inventoryWeight = 0;
 		uint32_t capacity = 40000;

@@ -121,18 +121,24 @@ event.onMoveItem = function(self, item, count, fromPosition, toPosition, fromCyl
 	
 	if toPosition.x == CONTAINER_POSITION then
 		local containerId = toPosition.y - 64
+	
+		if containerId < 0 or containerId > 15 then
+			self:sendCancelMessage('Invalid container.')
+			return false
+		end
+	
 		local container = self:getContainerById(containerId)		
 		if not container then
 			return true 
 		end
-
+	
 		-- Do not let the player insert items into either the Reward Container or the Reward Chest
 		local itemId = container:getId()		
 		if itemId == ITEM_REWARD_CONTAINER or itemId == ITEM_REWARD_CHEST then
 			self:sendCancelMessage('Sorry, not possible.')
 			return false
 		end
-
+	
 		-- The player also shouldn't be able to insert items into the boss corpse		
 		local tile = Tile(container:getPosition())
 		for _, item in ipairs(tile:getItems()) do
@@ -141,7 +147,7 @@ event.onMoveItem = function(self, item, count, fromPosition, toPosition, fromCyl
 				return false
 			end
 		end
-	end
+	end	
 
 	-- Do not let the player move the boss corpse.
 	if item:getAttribute(ITEM_ATTRIBUTE_CORPSEOWNER) == 2^31 - 1 then

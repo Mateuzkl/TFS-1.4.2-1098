@@ -125,8 +125,8 @@ registerMonsterType.flags = function(mtype, mask)
 		if mask.flags.canPushCreatures ~= nil then
 			mtype:canPushCreatures(mask.flags.canPushCreatures)
 		end
-		if mask.flags.rewardBoss ~= nil then
-			mtype:isRewardBoss(mask.flags.rewardBoss)
+		if mask.flags.isRewardBoss ~= nil then
+			mtype:isRewardBoss(mask.flags.isRewardBoss)
 		end
 		-- if a monster can push creatures,
 		-- it should not be pushable

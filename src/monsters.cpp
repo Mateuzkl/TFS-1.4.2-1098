@@ -904,6 +904,8 @@ MonsterType* Monsters::loadMonster(const std::string& file, const std::string& m
 				mType->info.pushable = attr.as_bool();
 			} else if (strcasecmp(attrName, "isboss") == 0) {
 				mType->info.isBoss = attr.as_bool();
+			} else if (strcasecmp(attrName, "isrewardboss") == 0) {
+				mType->info.isRewardBoss = attr.as_bool();
 			} else if (strcasecmp(attrName, "canpushitems") == 0) {
 				mType->info.canPushItems = attr.as_bool();
 			} else if (strcasecmp(attrName, "canpushcreatures") == 0) {
@@ -1426,6 +1428,9 @@ bool Monsters::loadLootItem(const pugi::xml_node& node, LootBlock& lootBlock)
 
 	if ((attr = node.attribute("text"))) {
 		lootBlock.text = attr.as_string();
+	}
+	if ((attr = node.attribute("unique"))) {
+		lootBlock.unique = attr.as_bool();
 	}
 	return true;
 }
