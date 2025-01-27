@@ -1,3 +1,11 @@
+function Player:sendInfoBox(text)
+	local m = NetworkMessage()
+	m:addByte(0xED)
+	m:addByte(0x00)
+	m:addString(text)
+	m:sendToPlayer(self)
+end
+
 local foodCondition = Condition(CONDITION_REGENERATION, CONDITIONID_DEFAULT)
 
 function Player.feed(self, food)
@@ -336,3 +344,4 @@ end
 function Player.getTotalMoney(self)
 	return self:getMoney() + self:getBankBalance()
 end
+

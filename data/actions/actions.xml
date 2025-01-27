@@ -13,7 +13,10 @@
 	<!-- Quests -->
 	<action itemid="1740" script="quests/quests.lua" />
 	<action fromid="1747" toid="1749" script="quests/quests.lua" />
-	<action uniqueid="30015" script="quests/annihilator.lua" />
+	
+	<!-- Podium toggle/quest reward -->
+	<action fromid="38629" toid="38630" script="quests/quests.lua" />
+	<action id="43738" script="quests/quests.lua" />
 
 	<!-- Tools -->
 	<action itemid="2120" script="tools/rope.lua" />
@@ -85,6 +88,16 @@
 	<action itemid="24843" script="other/food.lua" />
 	<action itemid="26191" script="other/food.lua" />
 	<action itemid="26201" script="other/food.lua" />
+	<action itemid="27038" script="other/food.lua" />
+	<action itemid="27039" script="other/food.lua" />
+	<action itemid="27052" script="other/food.lua" />
+	<action itemid="27095" script="other/food.lua" />
+	<action itemid="27604" script="other/food.lua" />
+	<action itemid="28348" script="other/food.lua" />
+	<action itemid="32854" script="other/food.lua" />
+	<action itemid="32858" script="other/food.lua" />
+	<action itemid="34216" script="other/food.lua" />
+	<action itemid="34725" script="other/food.lua" />
 
 	<!-- Music -->
 	<action fromid="2070" toid="2085" script="other/music.lua" />
@@ -97,27 +110,6 @@
 	<action fromid="6572" toid="6573" script="other/music.lua" />
 	<action itemid="13759" script="other/music.lua" />
 	<action itemid="23923" script="other/music.lua" />
-
-	<!-- Construction Kits -->
-	<action fromid="3901" toid="3938" script="other/construction_kits.lua" />
-	<action fromid="5086" toid="5088" script="other/construction_kits.lua" />
-	<action itemid="6114" script="other/construction_kits.lua" />
-	<action itemid="6115" script="other/construction_kits.lua" />
-	<action itemid="6372" script="other/construction_kits.lua" />
-	<action itemid="6373" script="other/construction_kits.lua" />
-	<action itemid="8692" script="other/construction_kits.lua" />
-	<action itemid="9974" script="other/construction_kits.lua" />
-	<action itemid="11124" script="other/construction_kits.lua" />
-	<action itemid="11126" script="other/construction_kits.lua" />
-	<action itemid="11133" script="other/construction_kits.lua" />
-	<action itemid="11205" script="other/construction_kits.lua" />
-	<action itemid="14328" script="other/construction_kits.lua" />
-	<action itemid="14329" script="other/construction_kits.lua" />
-	<action itemid="16075" script="other/construction_kits.lua" />
-	<action itemid="16099" script="other/construction_kits.lua" />
-	<action itemid="20254" script="other/construction_kits.lua" />
-	<action itemid="20255" script="other/construction_kits.lua" />
-	<action itemid="20257" script="other/construction_kits.lua" />
 
 	<!-- Fluids -->
 	<action itemid="1775" script="other/fluids.lua" />
@@ -154,14 +146,6 @@
 	<action itemid="2095" script="other/bird_cage.lua" />
 	<action itemid="2099" script="other/water_pipe.lua" />
 	<action itemid="2114" script="other/piggy_bank.lua" />
-	<action itemid="2148" script="other/change_gold.lua" />
-	<action itemid="2152" script="other/change_gold.lua" />
-	<action itemid="2160" script="other/change_gold.lua" />
-	<action fromid="2376" toid="2404" script="other/destroy.lua" />
-	<action fromid="2406" toid="2415" script="other/destroy.lua" />
-	<action fromid="2417" toid="2419" script="other/destroy.lua" />
-	<action fromid="2421" toid="2441" script="other/destroy.lua" />
-	<action fromid="2443" toid="2453" script="other/destroy.lua" />
 	<action itemid="2579" script="other/trap.lua" />
 	<action itemid="2692" script="other/create_bread.lua" />
 	<action itemid="2694" script="other/create_bread.lua" />

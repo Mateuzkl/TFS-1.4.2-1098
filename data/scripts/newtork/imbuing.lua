@@ -294,34 +294,36 @@ function ItemType:getImbuementsDescription(socketCount)
 	return string.format("\nImbuements: (%s).", table.concat(slots, ", "))
 end
 
--- [Item] verbal description of imbuing slots
 function Item:getImbuementsDescription()
-	local socketCount = self:getImbuingSlots()
+    local socketCount = self:getImbuingSlots()
+    print("Socket Count:", socketCount)
 
-	local rawImbuements = self:getImbuements()
-	if not rawImbuements or #rawImbuements == 0 then
-		-- all slots are empty, get info from ItemType
-		return self:getType():getImbuementsDescription(socketCount)
-	end
-	
-	for _, imbuData in pairs(rawImbuements) do
-		socketCount = math.max(socketCount, imbuData.slotId)
-	end
+    local rawImbuements = self:getImbuements()
+    if not rawImbuements or #rawImbuements == 0 then
+        -- all slots are empty, get info from ItemType
+        print("No imbuements found, using item type data.")
+        return self:getType():getImbuementsDescription(socketCount)
+    end
+    
+    for _, imbuData in pairs(rawImbuements) do
+        socketCount = math.max(socketCount, imbuData.slotId)
+        print(string.format("Imbuement found: Slot ID: %d, ImbuId: %d", imbuData.slotId, imbuData.imbuId))
+    end
 
-	if socketCount == 0 then
-		-- nothing to send
-		return ""
-	end
-	
-	local imbuements = {}
-	local maxSocketId = socketCount
-	for _, imbuement in pairs(rawImbuements) do
-		local slotId = imbuement.slotId
-		imbuements[slotId] = imbuement
-		maxSocketId = math.max(slotId + 1, maxSocketId)
-	end
-	
-	local response = {}
+    if socketCount == 0 then
+        print("No sockets available.")
+        return ""
+    end
+    
+    local imbuements = {}
+    local maxSocketId = socketCount
+    for _, imbuement in pairs(rawImbuements) do
+        local slotId = imbuement.slotId
+        imbuements[slotId] = imbuement
+        maxSocketId = math.max(slotId + 1, maxSocketId)
+    end
+
+    local response = {}
 	for socketId = 0, maxSocketId - 1 do
 		if imbuements[socketId] then
 			local duration = self:getImbuementDuration(imbuements[socketId])
@@ -330,14 +332,14 @@ function Item:getImbuementsDescription()
 				duration = math.floor(duration / 60)
 				durationStr = string.format("%d:%.2dh", math.floor(duration / 60), duration % 60)
 			end
-
+	
 			response[#response + 1] = string.format("%s %s", internalGetImbuementName(imbuements[socketId].imbuId), durationStr)
-		else
-			response[#response + 1] = "Empty Slot"
 		end
-	end
+	end	
 
-	return #response > 0 and string.format("\nImbuements: (%s)", table.concat(response, ", ")) or ""
+    local result = #response > 0 and string.format("\nImbuements: (%s)", table.concat(response, ", ")) or ""
+    print("Final Imbuement Description:", result)
+    return result
 end
 
 -- adds imbuements icons to item inspection UI

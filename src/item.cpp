@@ -849,6 +849,11 @@ void Item::serializeAttr(PropWriteStream& propWriteStream) const
 		propWriteStream.write<uint32_t>(getIntAttr(ITEM_ATTRIBUTE_TIER));
 	}
 
+	if (hasAttribute(ITEM_ATTRIBUTE_IMBUINGSLOTS)) {
+    propWriteStream.write<uint8_t>(ATTR_IMBUINGSLOTS);
+    propWriteStream.write<uint32_t>(getIntAttr(ITEM_ATTRIBUTE_IMBUINGSLOTS));
+	}
+
 	if (hasAttribute(ITEM_ATTRIBUTE_DEFENSE)) {
 		propWriteStream.write<uint8_t>(ATTR_DEFENSE);
 		propWriteStream.write<int32_t>(getIntAttr(ITEM_ATTRIBUTE_DEFENSE));
@@ -954,6 +959,7 @@ std::string Item::getDescription(const ItemType& it, int32_t lookDistance,
                                  const Item* item /*= nullptr*/, int32_t subType /*= -1*/, bool addArticle /*= true*/)
 {
 	const std::string* text = nullptr;
+	std::string marcador = (lookDistance == -2 ? "\n{info}" : "");
 
 	std::ostringstream s;
 	s << getNameDescription(it, item, subType, addArticle);
@@ -1566,6 +1572,44 @@ std::string Item::getDescription(const ItemType& it, int32_t lookDistance,
 
 		s << '.';
 	}
+
+	if (it.imbuingSlots > 0) {
+    s << std::endl << marcador << "Imbuements: (";
+    if (item) {
+        Item* thisItem = const_cast<Item*>(item);
+        const auto& imbuements = thisItem->getImbuements();
+
+        for (uint8_t slot = 0; slot < it.imbuingSlots; slot++) {
+            if (slot > 0) {
+                s << ", ";
+            }
+
+            auto it = imbuements.find(slot);
+            if (it != imbuements.end() && it->second.getImbuId() > 0) {
+                ImbuementType* imbuement = g_imbuements.getImbuementType(it->second.getImbuId() & 0xFF);
+                if (imbuement) {
+                    s << imbuement->getName();
+
+                    uint32_t info = it->second.getImbuId();
+                    uint32_t hours = (info >> 8) / 3600;
+                    uint32_t minutes = ((info >> 8) / 60) % 60;
+
+                    s << " " << hours << ":" << (minutes > 9 ? "" : "0") << minutes << "h";
+                }
+            } else {
+                s << "Empty Slot";
+            }
+        }
+    } else {
+        for (uint8_t slot = 0; slot < it.imbuingSlots; slot++) {
+            if (slot > 0) {
+                s << ", ";
+            }
+            s << "Empty Slot";
+        }
+    }
+    s << ").";
+}
 
 	if (lookDistance <= 1) {
 		if (item) {

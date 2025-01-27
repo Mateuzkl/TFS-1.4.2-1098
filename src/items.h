@@ -54,6 +54,7 @@ enum ItemParseAttributes_t {
 	ITEM_PARSE_ATTACK_SPEED,
 	ITEM_PARSE_CLASSIFICATION,
 	ITEM_PARSE_TIER,
+	ITEM_PARSE_IMBUINGSLOTS,
 	ITEM_PARSE_ROTATETO,
 	ITEM_PARSE_MOVEABLE,
 	ITEM_PARSE_BLOCKPROJECTILE,
@@ -302,6 +303,7 @@ class ItemType
 		uint32_t attackSpeed = 0;
 		uint32_t classification = 0;
 		uint32_t tier = 0;
+		int32_t imbuingSlots = 0;
 		uint32_t weight = 0;
 		uint32_t levelDoor = 0;
 		uint32_t decayTime = 0;
@@ -318,7 +320,6 @@ class ItemType
 		uint16_t rotateTo = 0;
 		int32_t runeMagLevel = 0;
 		int32_t runeLevel = 0;
-		uint8_t imbuingSlots = 0;
 
 		CombatType_t combatType = COMBAT_NONE;
 
