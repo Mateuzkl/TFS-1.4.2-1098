@@ -402,6 +402,12 @@ class Game
 		void playerCancelMarketOffer(uint32_t playerId, uint32_t timestamp, uint16_t counter);
 		void playerAcceptMarketOffer(uint32_t playerId, uint32_t timestamp, uint16_t counter, uint16_t amount);
 
+      // Imbuing_system
+		void playerImbuingApply(uint32_t playerId, uint8_t slotId, uint8_t imbuId, bool luckProtection);
+		void playerImbuingClear(uint32_t playerId, uint8_t slotId);
+		void playerImbuingExit(uint32_t playerId);
+		void playerToggleImbuPanel(uint32_t playerId, bool enabled);
+
 		void parsePlayerExtendedOpcode(uint32_t playerId, uint8_t opcode, const std::string& buffer);
 
 		void parsePlayerNetworkMessage(uint32_t playerId, uint8_t recvByte, NetworkMessage* msg);

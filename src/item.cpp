@@ -17,6 +17,7 @@
 #include "rewardchest.h"
 
 extern Game g_game;
+extern Imbuements g_imbuements;
 extern Spells* g_spells;
 extern Vocations g_vocations;
 
@@ -635,6 +636,32 @@ Attr_ReadValue Item::readAttr(AttrTypes_t attr, PropStream& propStream)
 			break;
 		}
 
+		case ATTR_IMBUEMENTS: {
+			uint8_t size;
+			if (!propStream.read<uint8_t>(size)) {
+				return ATTR_READ_ERROR;
+			}
+			for (uint8_t i = 0; i < size; ++i) {
+				uint8_t slotId = 0;
+				uint8_t imbuId = 0;
+				int32_t duration = 0;
+				int64_t lastUpdated = 0; // we are updating now so OTSYS_TIME() will be used instead
+				if (!propStream.read<uint8_t>(slotId) || !propStream.read<uint8_t>(imbuId) || !propStream.read<int32_t>(duration) || !propStream.read<int64_t>(lastUpdated)) {
+					return ATTR_READ_ERROR;
+				}
+				getAttributes()->setImbuement(Imbuement(slotId, imbuId, duration, OTSYS_TIME()));
+			}
+			break;
+		}
+		case ATTR_IMBUINGSLOTS: {
+			uint8_t slotCount;
+			if (!propStream.read<uint8_t>(slotCount)) {
+				return ATTR_READ_ERROR;
+			}
+			getAttributes()->imbuingSlots = static_cast<int16_t>(slotCount);
+			break;
+		}
+
 		//these should be handled through derived classes
 		//If these are called then something has changed in the items.xml since the map was saved
 		//just read the values
@@ -885,6 +912,22 @@ void Item::serializeAttr(PropWriteStream& propWriteStream) const
 			// Serializing value type and value
 			entry.second.serialize(propWriteStream);
 		}
+
+		const auto& imbuements = attributes->imbuements;
+		if (!imbuements.empty()) {
+			propWriteStream.write<uint8_t>(ATTR_IMBUEMENTS);
+			propWriteStream.write<uint8_t>(imbuements.size());
+			for (const auto& imbuement : imbuements) {
+				propWriteStream.write<uint8_t>(imbuement.first);
+				propWriteStream.write<uint8_t>(imbuement.second.getImbuId());
+				propWriteStream.write<int32_t>(imbuement.second.getDuration());
+				propWriteStream.write<int64_t>(imbuement.second.getLastUpdateTime());
+			}
+		}
+		if (attributes->imbuingSlots > -1) {
+			propWriteStream.write<uint8_t>(ATTR_IMBUINGSLOTS);
+			propWriteStream.write<uint8_t>(static_cast<uint8_t>(attributes->imbuingSlots));
+		}
 	}
 }
 
@@ -921,6 +964,7 @@ std::string Item::getDescription(const ItemType& it, int32_t lookDistance,
                                  const Item* item /*= nullptr*/, int32_t subType /*= -1*/, bool addArticle /*= true*/)
 {
 	const std::string* text = nullptr;
+	std::string marcador = (lookDistance == -2 ? "\n{info}" : "");
 
 	std::ostringstream s;
 	s << getNameDescription(it, item, subType, addArticle);
@@ -1534,6 +1578,40 @@ std::string Item::getDescription(const ItemType& it, int32_t lookDistance,
 		s << '.';
 	}
 
+	if (it.imbuingSlots > 0) {
+    s << std::endl << marcador << "Imbuements: (";
+    if (item) {
+        Item* thisItem = const_cast<Item*>(item);
+        const auto& imbuements = thisItem->getImbuements();
+        for (uint8_t slot = 0; slot < it.imbuingSlots; slot++) {
+            if (slot > 0) {
+                s << ", ";
+            }
+            auto it = imbuements.find(slot);
+            if (it != imbuements.end() && it->second.getImbuId() > 0) {
+                ImbuementType* imbuement = g_imbuements.getImbuementType(it->second.getImbuId() & 0xFF);
+                if (imbuement) {
+                    s << imbuement->getName();
+                    uint32_t info = it->second.getImbuId();
+                    uint32_t hours = (info >> 8) / 3600;
+                    uint32_t minutes = ((info >> 8) / 60) % 60;
+                    s << " " << hours << ":" << (minutes > 9 ? "" : "0") << minutes << "h";
+                }
+            } else {
+                s << "Empty Slot";
+            }
+        }
+    } else {
+        for (uint8_t slot = 0; slot < it.imbuingSlots; slot++) {
+            if (slot > 0) {
+                s << ", ";
+            }
+            s << "Empty Slot";
+        }
+    }
+    s << ").";
+}
+
 	if (lookDistance <= 1) {
 		if (item) {
 			const uint32_t weight = item->getWeight();
@@ -1829,6 +1907,19 @@ bool Item::hasMarketAttributes() const
 		return true;
 	}
 
+	// discard items with imbuements
+	if (attributes->imbuements.size() > 0) {
+		for (const auto& imbuInfo : attributes->imbuements) {
+			if (imbuInfo.second.getDuration() != 0) {
+				return false;
+			}
+		}
+	}
+	// discard items with custom amount of imbuing slots
+	if (attributes->imbuingSlots != -1) {
+		return false;
+	}
+
 	for (const auto& attr : attributes->getList()) {
 		if (attr.type == ITEM_ATTRIBUTE_CHARGES) {
 			uint16_t charges = static_cast<uint16_t>(attr.value.integer);
@@ -1845,6 +1936,60 @@ bool Item::hasMarketAttributes() const
 		}
 	}
 	return true;
+}
+
+void Item::refreshImbuements(Player* player, bool consumePassive, bool consumeInfight) {
+	// item was never customized
+	if (!attributes) {
+		return;
+	}
+	// invalid player reference
+	if (!player) {
+		return;
+	}
+	bool needRefresh = false;
+	std::map<uint8_t, Imbuement>& imbuements = getAttributes()->getImbuements();
+	for (auto it = imbuements.begin(); it != imbuements.end(); ) {
+		bool erase = false;
+		ImbuementType* imbuementType = g_imbuements.getImbuementType(it->second.getImbuId());
+		if (imbuementType && it->second.getDuration() > 0) {
+			it->second.update(consumeInfight || (imbuementType->isOutOfCombat() && consumePassive));
+			if (it->second.getDuration() <= 0) {
+				erase = true;
+				needRefresh = true;
+			}
+		} else if (it->second.getDuration() != -1) { // spare -1 for permanent imbuements
+			erase = true;
+			needRefresh = true;
+		}
+		if (erase) {
+			// imbuement type invalid or expired
+			player->toggleImbuement(it->second.getImbuId(), false);
+			it = imbuements.erase(it);
+		} else {
+			++it;
+		}
+	}
+	// refresh client stats (on expired imbuement)
+	if (needRefresh) {
+		player->sendStats();
+		player->sendSkills();
+	}
+}
+ItemImbuInfo_t Item::getStaticImbuements(bool inCombat) {
+	ItemImbuInfo_t imbuData;
+	imbuData.slotCount = getImbuingSlots();
+	if (attributes) {
+		for (auto& currentImbu : getImbuements()) {
+			ImbuementType* imbuementType = g_imbuements.getImbuementType(currentImbu.second.getImbuId());
+			if (imbuementType) {
+				uint8_t slotId = currentImbu.second.getSlotId();
+				imbuData.imbuements.push_back({ imbuementType->getName(), slotId, static_cast<uint16_t>(currentImbu.second.getImbuId()), currentImbu.second.getDuration(), imbuementType->isOutOfCombat() || inCombat });
+				imbuData.slotCount = std::max<uint8_t>(slotId + 1, imbuData.slotCount);
+			}
+		}
+	}
+	return imbuData;
 }
 
 template<>

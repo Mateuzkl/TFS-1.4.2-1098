@@ -902,6 +902,8 @@ itemAttrTypes stringToItemAttribute(const std::string& str)
 		return ITEM_ATTRIBUTE_CLASSIFICATION;
 	} else if (str == "tier") {
 		return ITEM_ATTRIBUTE_TIER;
+	} else if (str == "imbuingslots") {
+    return ITEM_ATTRIBUTE_IMBUINGSLOTS; 
 	} else if (str == "rewardid") {
 		return ITEM_ATTRIBUTE_REWARDID;
 	}

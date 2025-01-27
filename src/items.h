@@ -56,6 +56,7 @@ enum ItemParseAttributes_t {
 	ITEM_PARSE_ATTACK_SPEED,
 	ITEM_PARSE_CLASSIFICATION,
 	ITEM_PARSE_TIER,
+	ITEM_PARSE_IMBUINGSLOTS,
 	ITEM_PARSE_ROTATETO,
 	ITEM_PARSE_MOVEABLE,
 	ITEM_PARSE_BLOCKPROJECTILE,
@@ -310,6 +311,7 @@ class ItemType
 		uint32_t attackSpeed = 0;
 		uint32_t classification = 0;
 		uint32_t tier = 0;
+		int32_t imbuingSlots = 0;
 		uint32_t weight = 0;
 		uint32_t levelDoor = 0;
 		uint32_t decayTime = 0;
@@ -418,6 +420,8 @@ class Items
 
 		bool loadFromXml();
 		void parseItemNode(const pugi::xml_node& itemNode, uint16_t id);
+		
+		bool setImbuingSlots(size_t id, uint8_t count);
 
 		void buildInventoryList();
 		const InventoryVector& getInventory() const {

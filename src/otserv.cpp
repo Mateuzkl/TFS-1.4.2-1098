@@ -7,6 +7,8 @@
 
 #include "game.h"
 
+#include "imbuing.h"
+
 #include "iomarket.h"
 
 #include "configmanager.h"
@@ -37,6 +39,7 @@ Stats g_stats;
 
 Game g_game;
 ConfigManager g_config;
+Imbuements g_imbuements;
 Monsters g_monsters;
 Vocations g_vocations;
 extern Scripts* g_scripts;

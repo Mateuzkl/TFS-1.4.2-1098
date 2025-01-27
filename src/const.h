@@ -493,6 +493,12 @@ enum item_t : uint16_t {
 	ITEM_DOCUMENT_RO = 1968, //read-only
 };
 
+enum ResourceTypes_t: uint8_t {
+	// u64
+	RESOURCE_BANK_BALANCE = 0x00,
+	RESOURCE_GOLD_EQUIPPED = 0x01,
+};
+
 enum PlayerFlags : uint64_t {
 	PlayerFlag_CannotUseCombat = 1 << 0,
 	PlayerFlag_CannotAttackPlayer = 1 << 1,

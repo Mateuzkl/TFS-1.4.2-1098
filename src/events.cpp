@@ -52,6 +52,8 @@ bool Events::load()
 				info.creatureOnTargetCombat = event;
 			} else if (methodName == "onHear") {
 				info.creatureOnHear = event;
+			} else if (methodName == "onAddCondition") {
+				info.creatureOnAddCondition = event;
 			} else {
 				std::cout << "[Warning - Events::load] Unknown creature method: " << methodName << std::endl;
 			}
@@ -110,6 +112,12 @@ bool Events::load()
 				info.playerOnInventoryUpdate = event;
 			} else if (methodName == "onUpdateStorage") {
 				info.playerOnUpdateStorage = event;
+			} else if (methodName == "onImbuementApply") {
+				info.playerOnImbuementApply = event;
+			} else if (methodName == "onImbuementClear") {
+				info.playerOnImbuementClear = event;
+			} else if (methodName == "onImbuementExit") {
+				info.playerOnImbuementExit = event;
 			} else {
 				std::cout << "[Warning - Events::load] Unknown player method: " << methodName << std::endl;
 			}
@@ -295,6 +303,41 @@ void Events::eventCreatureOnHear(Creature* creature, Creature* speaker, const st
 	lua_pushnumber(L, type);
 
 	scriptInterface.callVoidFunction(4);
+}
+
+ReturnValue Events::eventCreatureOnAddCondition(Creature* creature, Condition* condition, bool isForced)
+{
+    if (info.creatureOnAddCondition == -1) {
+        return RETURNVALUE_NOERROR;
+    }
+    if (!scriptInterface.reserveScriptEnv()) {
+        std::cout << "[Error - Events::eventCreatureOnAddCondition] Call stack overflow" << std::endl;
+        return RETURNVALUE_NOTPOSSIBLE;
+    }
+    ScriptEnvironment* env = scriptInterface.getScriptEnv();
+    env->setScriptId(info.creatureOnAddCondition, &scriptInterface);
+    lua_State* L = scriptInterface.getLuaState();
+    scriptInterface.pushFunction(info.creatureOnAddCondition);
+    LuaScriptInterface::pushUserdata<Creature>(L, creature);
+    LuaScriptInterface::setCreatureMetatable(L, -1, creature);
+    LuaScriptInterface::pushUserdata<Condition>(L, condition);
+    LuaScriptInterface::setMetatable(L, -1, "Condition");
+    lua_pushboolean(L, isForced);
+    ReturnValue returnValue = RETURNVALUE_NOERROR;
+    if (scriptInterface.protectedCall(L, 3, 1) != 0) {
+        returnValue = RETURNVALUE_NOTPOSSIBLE;
+        LuaScriptInterface::reportError(nullptr, LuaScriptInterface::popString(L));
+    } else {
+        if (lua_isnumber(L, -1)) {
+            returnValue = LuaScriptInterface::getNumber<ReturnValue>(L, -1);
+        } else {
+            std::cout << "[Error - Events::eventCreatureOnAddCondition] Invalid return type from script" << std::endl;
+            returnValue = RETURNVALUE_NOTPOSSIBLE;
+        }
+        lua_pop(L, 1);
+    }
+    scriptInterface.resetScriptEnv();
+    return returnValue;
 }
 
 // Party
@@ -1088,3 +1131,67 @@ void Events::eventMonsterOnDropLoot(Monster* monster, Container* corpse)
 	return scriptInterface.callVoidFunction(2);
 }
 
+void Events::eventPlayerOnImbuementApply(Player* player, uint8_t slotId, uint8_t imbuId, bool luckProtection)
+{
+	// Player:onImbuementApply(slotId, imbuId, luckProtection)
+	if (info.playerOnImbuementApply == -1) {
+		return;
+	}
+	if (!scriptInterface.reserveScriptEnv()) {
+		std::cout << "[Error - Events::eventPlayerOnImbuementApply] Call stack overflow" << std::endl;
+		return;
+	}
+	ScriptEnvironment* env = scriptInterface.getScriptEnv();
+	env->setScriptId(info.playerOnImbuementApply, &scriptInterface);
+	lua_State* L = scriptInterface.getLuaState();
+	scriptInterface.pushFunction(info.playerOnImbuementApply);
+	// player
+	LuaScriptInterface::pushUserdata<Player>(L, player);
+	LuaScriptInterface::setMetatable(L, -1, "Player");
+	// slotId
+	lua_pushnumber(L, slotId);
+	// imbuId
+	lua_pushnumber(L, imbuId);
+	// luckProtection
+	lua_pushboolean(L, luckProtection);
+	scriptInterface.callVoidFunction(4);
+}
+void Events::eventPlayerOnImbuementClear(Player* player, uint8_t slotId)
+{
+	// Player:onImbuementClear(slotId)
+	if (info.playerOnImbuementClear == -1) {
+		return;
+	}
+	if (!scriptInterface.reserveScriptEnv()) {
+		std::cout << "[Error - Events::eventPlayerOnImbuementClear] Call stack overflow" << std::endl;
+		return;
+	}
+	ScriptEnvironment* env = scriptInterface.getScriptEnv();
+	env->setScriptId(info.playerOnImbuementClear, &scriptInterface);
+	lua_State* L = scriptInterface.getLuaState();
+	scriptInterface.pushFunction(info.playerOnImbuementClear);
+	// player
+	LuaScriptInterface::pushUserdata<Player>(L, player);
+	LuaScriptInterface::setMetatable(L, -1, "Player");
+	lua_pushnumber(L, slotId);
+	scriptInterface.callVoidFunction(2);
+}
+void Events::eventPlayerOnImbuementExit(Player* player)
+{
+	// Player:onImbuementExit()
+	if (info.playerOnImbuementExit == -1) {
+		return;
+	}
+	if (!scriptInterface.reserveScriptEnv()) {
+		std::cout << "[Error - Events::eventPlayerOnImbuementExit] Call stack overflow" << std::endl;
+		return;
+	}
+	ScriptEnvironment* env = scriptInterface.getScriptEnv();
+	env->setScriptId(info.playerOnImbuementExit, &scriptInterface);
+	lua_State* L = scriptInterface.getLuaState();
+	scriptInterface.pushFunction(info.playerOnImbuementExit);
+	// player
+	LuaScriptInterface::pushUserdata<Player>(L, player);
+	LuaScriptInterface::setMetatable(L, -1, "Player");
+	scriptInterface.callVoidFunction(1);
+}

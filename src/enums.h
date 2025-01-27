@@ -79,7 +79,8 @@ enum itemAttrTypes : uint32_t {
 	ITEM_ATTRIBUTE_ATTACK_SPEED = 1 << 26,
 	ITEM_ATTRIBUTE_CLASSIFICATION = 1 << 27,
 	ITEM_ATTRIBUTE_TIER = 1 << 28,
-	ITEM_ATTRIBUTE_REWARDID = 1 << 29,
+	ITEM_ATTRIBUTE_IMBUINGSLOTS = 1 << 29,
+	ITEM_ATTRIBUTE_REWARDID = 1 << 30,
 
 	ITEM_ATTRIBUTE_CUSTOM = 1U << 31
 };
@@ -263,6 +264,9 @@ enum ConditionParam_t {
 	CONDITION_PARAM_SPECIALSKILL_MANALEECHAMOUNT = 53,
 	CONDITION_PARAM_AGGRESSIVE = 54,
 	CONDITION_PARAM_DRUNKENNESS = 55,
+	CONDITION_PARAM_STAT_CAPACITY = 56,
+	CONDITION_PARAM_STAT_CAPACITYPERCENT = 57,
+	CONDITION_PARAM_STAT_VIBRANCY = 58,
 };
 
 enum BlockType_t : uint8_t {
@@ -293,9 +297,11 @@ enum stats_t {
 	STAT_MAXMANAPOINTS,
 	STAT_SOULPOINTS, // unused
 	STAT_MAGICPOINTS,
+	STAT_CAPACITY,
+	STAT_VIBRANCY,
 
 	STAT_FIRST = STAT_MAXHITPOINTS,
-	STAT_LAST = STAT_MAGICPOINTS
+	STAT_LAST = STAT_VIBRANCY
 };
 
 enum SpecialSkills_t {
@@ -497,6 +503,18 @@ struct Outfit_t {
 	uint8_t lookAddons = 0;
 };
 
+struct StaticImbuement_t {
+	const std::string name;
+	uint8_t slotId = 0;
+	uint16_t iconId = 0;
+	int32_t duration = 0;
+	bool isDecaying = false;
+};
+struct ItemImbuInfo_t {
+	uint8_t slotCount = 0;
+	std::vector<StaticImbuement_t> imbuements;
+};
+
 struct LightInfo {
 	uint8_t level = 0;
 	uint8_t color = 0;
@@ -576,6 +594,7 @@ enum CombatOrigin
 	ORIGIN_SPELL,
 	ORIGIN_MELEE,
 	ORIGIN_RANGED,
+	ORIGIN_CONVERTED, // imbuement damage conversion
 };
 
 struct CombatDamage

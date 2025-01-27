@@ -5,6 +5,7 @@
 #define FS_ITEM_H_009A319FB13D477D9EEFFBBD9BB83562
 
 #include "cylinder.h"
+#include "imbuing.h"
 #include "thing.h"
 #include "items.h"
 #include "luascript.h"
@@ -90,6 +91,8 @@ enum AttrTypes_t {
 	ATTR_CLASSIFICATION = 39,
 	ATTR_TIER = 40,
 	ATTR_REWARDID = 41,
+	ATTR_IMBUEMENTS = 42, // applied imbuements
+	ATTR_IMBUINGSLOTS = 43, // custom amount of imbuing slots
 };
 
 enum Attr_ReadValue {
@@ -331,6 +334,28 @@ class ItemAttributes
 			}
 		};
 
+		// imbuements on item
+		std::map<uint8_t, Imbuement>& getImbuements() {
+			return imbuements;
+		}
+		size_t getImbuementsCount() {
+			return imbuements.size();
+		}
+		// imbuement active on slot
+		Imbuement* getImbuement(uint8_t slotId) {
+			auto it = imbuements.find(slotId);
+			if (it == imbuements.end()) {
+				return nullptr;
+			}
+			return &imbuements[slotId];
+		}
+		void setImbuement(Imbuement imbuement) {
+			this->imbuements[imbuement.getSlotId()] = imbuement;
+		}
+		bool removeImbuement(uint8_t slotId) {
+			return this->imbuements.erase(slotId);
+		}
+
 	private:
 		bool hasAttribute(itemAttrTypes type) const {
 			return (type & attributeBits) != 0;
@@ -408,6 +433,8 @@ class ItemAttributes
 
 		std::vector<Attribute> attributes;
 		uint32_t attributeBits = 0;
+		int16_t imbuingSlots = -1; // if -1 then inherit from ItemType
+		std::map<uint8_t, Imbuement> imbuements;
 
 		const std::string& getStrAttr(itemAttrTypes type) const;
 		void setStrAttr(itemAttrTypes type, const std::string& value);
@@ -495,7 +522,7 @@ class ItemAttributes
 			| ITEM_ATTRIBUTE_ARMOR | ITEM_ATTRIBUTE_HITCHANCE | ITEM_ATTRIBUTE_SHOOTRANGE | ITEM_ATTRIBUTE_OWNER
 			| ITEM_ATTRIBUTE_DURATION | ITEM_ATTRIBUTE_DECAYSTATE | ITEM_ATTRIBUTE_CORPSEOWNER | ITEM_ATTRIBUTE_CHARGES
 			| ITEM_ATTRIBUTE_FLUIDTYPE | ITEM_ATTRIBUTE_DOORID | ITEM_ATTRIBUTE_DECAYTO | ITEM_ATTRIBUTE_WRAPID | ITEM_ATTRIBUTE_STOREITEM
-			| ITEM_ATTRIBUTE_ATTACK_SPEED | ITEM_ATTRIBUTE_CLASSIFICATION | ITEM_ATTRIBUTE_TIER | ITEM_ATTRIBUTE_REWARDID;
+			| ITEM_ATTRIBUTE_ATTACK_SPEED | ITEM_ATTRIBUTE_CLASSIFICATION | ITEM_ATTRIBUTE_TIER | ITEM_ATTRIBUTE_IMBUINGSLOTS | ITEM_ATTRIBUTE_REWARDID;
 		const static uint32_t stringAttributeTypes = ITEM_ATTRIBUTE_DESCRIPTION | ITEM_ATTRIBUTE_TEXT | ITEM_ATTRIBUTE_WRITER
 			| ITEM_ATTRIBUTE_NAME | ITEM_ATTRIBUTE_ARTICLE | ITEM_ATTRIBUTE_PLURALNAME;
 
@@ -792,6 +819,28 @@ class Item : virtual public Thing
 		std::string getNameDescription() const;
 		std::string getWeightDescription() const;
 
+		// Imbuements
+		const std::map<uint8_t, Imbuement>& getImbuements() {
+			return getAttributes()->getImbuements();
+		}
+		void refreshImbuements(Player* player, bool consumePassive = false, bool consumeInfight = false);
+		ItemImbuInfo_t getStaticImbuements(bool inCombat);
+		uint8_t getImbuingSlots() const {
+			if (!attributes || attributes->imbuingSlots < 0) {
+				return items[id].imbuingSlots;
+			}
+			return static_cast<uint8_t>(std::max<int16_t>(0, attributes->imbuingSlots));
+		}
+		void setImbuingSlots(int16_t slotCount) {
+			if (!attributes) {
+				attributes.reset(new ItemAttributes());
+			}
+			if (slotCount < 0) {
+				slotCount = -1;
+			}
+			attributes->imbuingSlots = slotCount;
+		}
+
 		//serialization
 		virtual Attr_ReadValue readAttr(AttrTypes_t attr, PropStream& propStream);
 		bool unserializeAttr(PropStream& propStream);
@@ -1011,6 +1060,10 @@ class Item : virtual public Thing
 		}
 
 		bool hasMarketAttributes() const;
+
+		bool hasAttributes() const {
+			return attributes ? true : false;
+		}
 
 		std::unique_ptr<ItemAttributes>& getAttributes() {
 			if (!attributes) {

@@ -36,6 +36,7 @@ extern TalkActions* g_talkActions;
 extern Spells* g_spells;
 extern Vocations g_vocations;
 extern GlobalEvents* g_globalEvents;
+extern Imbuements g_imbuements;
 extern CreatureEvents* g_creatureEvents;
 extern Events* g_events;
 extern Monsters g_monsters;
@@ -3792,76 +3793,122 @@ void Game::changeLight(const Creature* creature)
 bool Game::combatBlockHit(CombatDamage& damage, Creature* attacker, Creature* target, bool checkDefense, bool checkArmor, bool field, bool ignoreResistances /*= false */)
 {
 	if (damage.primary.type == COMBAT_NONE && damage.secondary.type == COMBAT_NONE) {
-		return true;
-	}
-
-	if (target->getPlayer() && target->isInGhostMode()) {
-		return true;
-	}
-
-	if (damage.primary.value > 0) {
-		return false;
-	}
-
-	static const auto sendBlockEffect = [this](BlockType_t blockType, CombatType_t combatType, const Position& targetPos) {
-		if (blockType == BLOCK_DEFENSE) {
-			addMagicEffect(targetPos, CONST_ME_POFF);
-		} else if (blockType == BLOCK_ARMOR) {
-			addMagicEffect(targetPos, CONST_ME_BLOCKHIT);
-		} else if (blockType == BLOCK_IMMUNITY) {
-			uint8_t hitEffect = 0;
-			switch (combatType) {
-				case COMBAT_UNDEFINEDDAMAGE: {
-					return;
-				}
-				case COMBAT_ENERGYDAMAGE:
-				case COMBAT_FIREDAMAGE:
-				case COMBAT_PHYSICALDAMAGE:
-				case COMBAT_ICEDAMAGE:
-				case COMBAT_DEATHDAMAGE: {
-					hitEffect = CONST_ME_BLOCKHIT;
-					break;
-				}
-				case COMBAT_EARTHDAMAGE: {
-					hitEffect = CONST_ME_GREEN_RINGS;
-					break;
-				}
-				case COMBAT_HOLYDAMAGE: {
-					hitEffect = CONST_ME_HOLYDAMAGE;
-					break;
-				}
-				default: {
-					hitEffect = CONST_ME_POFF;
-					break;
-				}
-			}
-			addMagicEffect(targetPos, hitEffect);
-		}
-	};
-
-	BlockType_t primaryBlockType, secondaryBlockType;
-	if (damage.primary.type != COMBAT_NONE) {
-		damage.primary.value = -damage.primary.value;
-		primaryBlockType = target->blockHit(attacker, damage.primary.type, damage.primary.value, checkDefense, checkArmor, field, ignoreResistances);
-
-		damage.primary.value = -damage.primary.value;
-		sendBlockEffect(primaryBlockType, damage.primary.type, target->getPosition());
-	} else {
-		primaryBlockType = BLOCK_NONE;
-	}
-
-	if (damage.secondary.type != COMBAT_NONE) {
-		damage.secondary.value = -damage.secondary.value;
-		secondaryBlockType = target->blockHit(attacker, damage.secondary.type, damage.secondary.value, false, false, field, ignoreResistances);
-		damage.secondary.value = -damage.secondary.value;
-		sendBlockEffect(secondaryBlockType, damage.secondary.type, target->getPosition());
-	} else {
-		secondaryBlockType = BLOCK_NONE;
-	}
-
-	damage.blockType = primaryBlockType;
-
-	return (primaryBlockType != BLOCK_NONE) && (secondaryBlockType != BLOCK_NONE);
+        return true;
+    }
+    if (target->getPlayer() && target->isInGhostMode()) {
+        return true;
+    }
+    if (damage.primary.value > 0) {
+        return false;
+    }
+    static const auto sendBlockEffect = [this](BlockType_t blockType, CombatType_t combatType, const Position& targetPos) {
+        if (blockType == BLOCK_DEFENSE) {
+            addMagicEffect(targetPos, CONST_ME_POFF);
+        } else if (blockType == BLOCK_ARMOR) {
+            addMagicEffect(targetPos, CONST_ME_BLOCKHIT);
+        } else if (blockType == BLOCK_IMMUNITY) {
+            uint8_t hitEffect = 0;
+            switch (combatType) {
+                case COMBAT_UNDEFINEDDAMAGE: {
+                    return;
+                }
+                case COMBAT_ENERGYDAMAGE:
+                case COMBAT_FIREDAMAGE:
+                case COMBAT_PHYSICALDAMAGE:
+                case COMBAT_ICEDAMAGE:
+                case COMBAT_DEATHDAMAGE: {
+                    hitEffect = CONST_ME_BLOCKHIT;
+                    break;
+                }
+                case COMBAT_EARTHDAMAGE: {
+                    hitEffect = CONST_ME_GREEN_RINGS;
+                    break;
+                }
+                case COMBAT_HOLYDAMAGE: {
+                    hitEffect = CONST_ME_HOLYDAMAGE;
+                    break;
+                }
+                default: {
+                    hitEffect = CONST_ME_POFF;
+                    break;
+                }
+            }
+            addMagicEffect(targetPos, hitEffect);
+        }
+    };
+    std::unordered_map<CombatType_t, int32_t> convertedDamage;
+    bool converted = false;
+    if (Player* player = target->getPlayer()) {
+    for (int slot = CONST_SLOT_FIRST; slot <= CONST_SLOT_LAST; ++slot) {
+        Item* item = player->getInventoryItem(static_cast<slots_t>(slot));
+        if (!item || !item->hasAttributes()) {
+            continue;
+        }
+        const auto& imbuements = item->getImbuements();
+        if (!imbuements.empty()) {
+            for (const auto& imbuement : imbuements) {
+                uint8_t imbuId = imbuement.second.getImbuId();
+                if (imbuId >= IMBUEMENT_DAMAGE_FIRST && imbuId <= IMBUEMENT_DAMAGE_LAST) {
+                    ImbuementType* imbuType = g_imbuements.getImbuementType(imbuId);
+                    CombatType_t newCombatType = static_cast<CombatType_t>(imbuType->getPrimaryValue());
+                    if (newCombatType != COMBAT_PHYSICALDAMAGE) {
+                        int32_t convertedAmount = std::round(convertedDamage[COMBAT_PHYSICALDAMAGE] * (imbuType->getSecondaryValue() / 100.0));
+                        convertedDamage[COMBAT_PHYSICALDAMAGE] -= convertedAmount;
+                        convertedDamage[newCombatType] += convertedAmount;
+                        converted = true;
+                    } else {
+                        for (auto const& [combatType, amount] : convertedDamage) {
+                            if (combatType != COMBAT_PHYSICALDAMAGE) {
+                                int32_t convertedAmount = std::round(amount * (imbuType->getSecondaryValue() / 100.0));
+                                convertedDamage[COMBAT_PHYSICALDAMAGE] += convertedAmount;
+                                convertedDamage[combatType] -= convertedAmount;
+                                converted = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+    if (converted) {
+        damage.primary.value = 0;
+        damage.secondary.value = 0;
+        for (auto const& [combatType, amount] : convertedDamage) {
+            if (damage.primary.value == 0) {
+                damage.primary.type = combatType;
+                damage.primary.value = amount;
+            } else if (damage.secondary.value == 0) {
+                damage.secondary.type = combatType;
+                damage.secondary.value = amount;
+            } else {
+                CombatDamage extraDamage;
+                extraDamage.primary.type = combatType;
+                extraDamage.primary.value = amount;
+                extraDamage.origin = ORIGIN_CONVERTED;
+                g_game.combatChangeHealth(attacker, target, extraDamage);
+            }
+        }
+    }
+    BlockType_t primaryBlockType, secondaryBlockType;
+    if (damage.primary.type != COMBAT_NONE) {
+        damage.primary.value = -damage.primary.value;
+        primaryBlockType = target->blockHit(attacker, damage.primary.type, damage.primary.value, checkDefense, checkArmor, field, ignoreResistances);
+        damage.primary.value = -damage.primary.value;
+        sendBlockEffect(primaryBlockType, damage.primary.type, target->getPosition());
+    } else {
+        primaryBlockType = BLOCK_NONE;
+    }
+    if (damage.secondary.type != COMBAT_NONE) {
+        damage.secondary.value = -damage.secondary.value;
+        secondaryBlockType = target->blockHit(attacker, damage.secondary.type, damage.secondary.value, false, false, field, ignoreResistances);
+        damage.secondary.value = -damage.secondary.value;
+        sendBlockEffect(secondaryBlockType, damage.secondary.type, target->getPosition());
+    } else {
+        secondaryBlockType = BLOCK_NONE;
+    }
+    damage.blockType = primaryBlockType;
+    return (primaryBlockType != BLOCK_NONE) && (secondaryBlockType != BLOCK_NONE);
 }
 
 void Game::combatGetTypeInfo(CombatType_t combatType, Creature* target, TextColor_t& color, uint8_t& effect)
@@ -5456,6 +5503,60 @@ void Game::playerAcceptMarketOffer(uint32_t playerId, uint32_t timestamp, uint16
 	player->sendMarketEnter(player->getLastDepotId());
 	offer.timestamp += marketOfferDuration;
 	player->sendMarketAcceptOffer(offer);
+}
+
+void Game::playerImbuingApply(uint32_t playerId, uint8_t slotId, uint8_t imbuId, bool luckProtection)
+{
+	Player* player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+	// prevent request spam
+	if (!player->canDoHeavyUIAction()) {
+		return;
+	}
+	player->setNextHeavyUIAction();
+	g_events->eventPlayerOnImbuementApply(player, slotId, imbuId, luckProtection);
+}
+void Game::playerImbuingClear(uint32_t playerId, uint8_t slotId)
+{
+	Player* player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+	// prevent request spam
+	if (!player->canDoHeavyUIAction()) {
+		return;
+	}
+	player->setNextHeavyUIAction();
+	g_events->eventPlayerOnImbuementClear(player, slotId);
+}
+void Game::playerImbuingExit(uint32_t playerId)
+{
+	Player* player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+	g_events->eventPlayerOnImbuementExit(player);
+}
+void Game::playerToggleImbuPanel(uint32_t playerId, bool enabled)
+{
+	Player* player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+	if (!enabled) {
+		// nothing to send, just toggle and return
+		player->toggleImbuPanel(false);
+		return;
+	}
+	// prevent request spam
+	if (!player->canDoLightUIAction()) {
+		return;
+	}
+	player->setNextLightUIAction();
+	player->toggleImbuPanel(true);
+	player->sendImbuementsPanel();
 }
 
 void Game::parsePlayerExtendedOpcode(uint32_t playerId, uint8_t opcode, const std::string& buffer)

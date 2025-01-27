@@ -23,6 +23,7 @@ extern ConfigManager g_config;
 extern Actions actions;
 extern CreatureEvents* g_creatureEvents;
 extern Chat* g_chat;
+extern Game g_game;
 
 namespace {
 
@@ -1583,6 +1584,11 @@ void ProtocolGame::sendCloseShop()
 
 void ProtocolGame::sendSaleItemList(const std::list<ShopInfo>& shop)
 {
+	uint64_t playerBank = player->getBankBalance();
+	uint64_t playerMoney = player->getMoney();
+	sendResourceBalance(RESOURCE_BANK_BALANCE, playerBank);
+	sendResourceBalance(RESOURCE_GOLD_EQUIPPED, playerMoney);
+
 	NetworkMessage msg;
 	msg.addByte(0x7B);
 	msg.add<uint64_t>(player->getMoney() + player->getBankBalance());
@@ -1659,6 +1665,58 @@ void ProtocolGame::sendSaleItemList(const std::list<ShopInfo>& shop)
 		msg.addByte(std::min<uint32_t>(it->second, std::numeric_limits<uint8_t>::max()));
 	}
 
+	writeToOutputBuffer(msg);
+}
+
+void ProtocolGame::sendResourceBalance(const ResourceTypes_t resourceType, uint64_t amount)
+{
+    NetworkMessage msg;
+    msg.addByte(0xEE); // Opcode to send resource balance
+    msg.addByte(resourceType);
+
+    /*
+    // Future activation for RESOURCE_CHARM_POINTS
+    if (resourceType == RESOURCE_CHARM_POINTS) {
+        msg.add<uint32_t>(amount);
+    } else {
+    */
+
+        // Prevent overflow in the forge UI
+        switch(resourceType) {
+            /*
+            // Future activation for RESOURCE_FORGE_DUST
+            case RESOURCE_FORGE_DUST:
+                // Limit the amount to a maximum of uint8_t (255)
+                amount = std::min<uint64_t>(std::numeric_limits<uint8_t>::max(), amount);
+                break;
+            */
+
+            /*
+            // Future activation for RESOURCE_FORGE_SLIVERS and RESOURCE_FORGE_CORES
+            case RESOURCE_FORGE_SLIVERS:
+            case RESOURCE_FORGE_CORES:
+                // Limit the amount to a maximum of uint16_t (65535)
+                amount = std::min<uint64_t>(std::numeric_limits<uint16_t>::max(), amount);
+                break;
+            */
+
+            default:
+                break;
+        }
+        msg.add<uint64_t>(amount);
+    //}
+
+    writeToOutputBuffer(msg);
+}
+
+void ProtocolGame::sendStoreBalance()
+{
+	// dispatcher thread only
+	// send balance
+	NetworkMessage msg;
+	// header
+	msg.addByte(0xDF);
+	msg.addByte(0x01);
 	writeToOutputBuffer(msg);
 }
 
@@ -2855,6 +2913,41 @@ void ProtocolGame::sendSpellGroupCooldown(SpellGroup_t groupId, uint32_t time)
 	msg.addByte(0xA5);
 	msg.addByte(groupId);
 	msg.add<uint32_t>(time);
+	writeToOutputBuffer(msg);
+}
+
+void ProtocolGame::sendImbuementsPanel(const std::map<slots_t, Item*> itemsToSend)
+{
+	if (!player || player->isRemoved()) {
+		return;
+	}
+	NetworkMessage msg;
+	msg.addByte(0x5D);
+	msg.addByte(itemsToSend.size());
+	for (const auto& it : itemsToSend) {
+		msg.addByte(it.first);
+		msg.addItem(it.second);
+		ItemImbuInfo_t imbuInfo = it.second->getStaticImbuements(player->hasCondition(CONDITION_INFIGHT) && player->getZone() != ZONE_PROTECTION);
+		msg.addByte(imbuInfo.slotCount);
+		for (uint8_t slotId = 0; slotId < imbuInfo.slotCount; ++slotId) {
+			bool found = false;
+			for (const auto& imbuData : imbuInfo.imbuements) {
+				if (!found && slotId == imbuData.slotId) {
+					// occupied slot
+					msg.addByte(0x01);
+					msg.addString(imbuData.name);
+					msg.add<uint16_t>(imbuData.iconId);
+					msg.add<int32_t>(imbuData.duration);
+					msg.addByte(imbuData.isDecaying ? 0x01 : 0x00);
+					found = true;
+				}
+			}
+			if (!found) {
+				// empty slot
+				msg.addByte(0x00);
+			}
+		}
+	}
 	writeToOutputBuffer(msg);
 }
 

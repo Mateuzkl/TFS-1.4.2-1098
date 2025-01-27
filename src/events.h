@@ -25,6 +25,7 @@ class Events
 		int32_t creatureOnAreaCombat = -1;
 		int32_t creatureOnTargetCombat = -1;
 		int32_t creatureOnHear = -1;
+		int32_t creatureOnAddCondition = -1;
 
 		// Party
 		int32_t partyOnJoin = -1;
@@ -54,6 +55,11 @@ class Events
 		int32_t playerOnInventoryUpdate = -1;
 		int32_t playerOnNetworkMessage = -1;
 		int32_t playerOnUpdateStorage = -1;
+		
+		//Imbuing_system
+		int32_t playerOnImbuementApply = -1;
+		int32_t playerOnImbuementClear = -1;
+		int32_t playerOnImbuementExit = -1;
 
 		// Monster
 		int32_t monsterOnDropLoot = -1;
@@ -70,6 +76,7 @@ class Events
 		ReturnValue eventCreatureOnAreaCombat(Creature* creature, Tile* tile, bool aggressive);
 		ReturnValue eventCreatureOnTargetCombat(Creature* creature, Creature* target);
 		void eventCreatureOnHear(Creature* creature, Creature* speaker, const std::string& words, SpeakClasses type);
+		ReturnValue eventCreatureOnAddCondition(Creature* creature, Condition* condition, bool isForced);
 
 		// Party
 		bool eventPartyOnJoin(Party* party, Player* player);
@@ -100,6 +107,12 @@ class Events
 		void eventPlayerOnNetworkMessage(Player* player, uint8_t recvByte, NetworkMessage* msg);
 		void eventPlayerOnUpdateStorage(Player* player, const uint32_t key, const int32_t value, const int32_t oldValue,
 	                                bool isLogin);
+
+		// Imbuing_system
+		void eventPlayerOnImbuementApply(Player* player, uint8_t slotId, uint8_t imbuId, bool luckProtection);
+		void eventPlayerOnImbuementClear(Player* player, uint8_t slotId);
+		void eventPlayerOnImbuementExit(Player* player);
+
 
 		// Monster
 		void eventMonsterOnDropLoot(Monster* monster, Container* corpse);

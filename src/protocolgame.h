@@ -186,6 +186,8 @@ class ProtocolGame final : public Protocol
 		void sendShop(Npc* npc, const ShopInfoList& itemList);
 		void sendCloseShop();
 		void sendSaleItemList(const std::list<ShopInfo>& shop);
+		void sendResourceBalance(const ResourceTypes_t resourceType, uint64_t amount);
+		void sendStoreBalance();
 		void sendMarketEnter(uint32_t depotId);
 		void sendMarketLeave();
 		void sendMarketBrowseItem(uint16_t itemId, const MarketOfferList& buyOffers, const MarketOfferList& sellOffers);
@@ -218,6 +220,7 @@ class ProtocolGame final : public Protocol
 
 		void sendSpellCooldown(uint8_t spellId, uint32_t time);
 		void sendSpellGroupCooldown(SpellGroup_t groupId, uint32_t time);
+		void sendImbuementsPanel(const std::map<slots_t, Item*> itemsToSend);
 
 		//tiles
 		void sendMapDescription(const Position& pos);

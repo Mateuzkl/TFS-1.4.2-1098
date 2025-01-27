@@ -27,6 +27,7 @@ ec.onChangeMount = {}
 ec.onAreaCombat = {returnValue=true}
 ec.onTargetCombat = {returnValue=true}
 ec.onHear = {}
+ec.onAddCondition = {returnValue=true}
 ec.onChangeZone = {}
 -- Party
 ec.onJoin = {}
@@ -53,12 +54,22 @@ ec.onTurn = {}
 ec.onGainExperience = {[3] = 1}
 ec.onLoseExperience = {[2] = 1}
 ec.onGainSkillTries = {[3] = 1}
+ec.onWrapItem = {}
 ec.onSay = {}
 ec.onStepTile = {}
 ec.onSpellCheck = {}
 ec.onInventoryUpdate = {}
 ec.onNetworkMessage = {}
 ec.onUpdateStorage = {}
+
+
+-- Imbuing_system
+ec.onInventoryUpdate = {}
+ec.onImbuementApply = {}
+ec.onImbuementClear = {}
+ec.onImbuementExit = {}
+
+
 -- Monster
 ec.onDropLoot = {}
 ec.onSpawn = {}
