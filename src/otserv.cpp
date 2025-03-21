@@ -19,6 +19,7 @@
 #include "scheduler.h"
 #include "databasetasks.h"
 #include "script.h"
+#include "prey.h"
 #include <fstream>
 #include <fmt/color.h>
 #if __has_include("gitmetadata.h")
@@ -36,6 +37,7 @@ Monsters g_monsters;
 Vocations g_vocations;
 extern Scripts* g_scripts;
 RSA g_RSA;
+Prey g_prey;
 
 std::mutex g_loaderLock;
 std::condition_variable g_loaderSignal;
@@ -254,6 +256,12 @@ void mainLoader(int, char*[], ServiceManager* services)
 		startupErrorMessage("Unable to load outfits!");
 		return;
 	}
+
+	std::cout << ">> Loading prey data" << std::endl;
+ 	if (!g_prey.loadFromXml()) {
+ 		startupErrorMessage("Unable to load prey data!");
+ 		return;
+ 	}
 
 	std::cout << ">> Checking world type... " << std::flush;
 	std::string worldType = asLowerCaseString(g_config.getString(ConfigManager::WORLD_TYPE));

@@ -1481,7 +1481,7 @@ Item* Game::findItemOfType(Cylinder* cylinder, uint16_t itemId,
 	return nullptr;
 }
 
-bool Game::removeMoney(Cylinder* cylinder, uint64_t money, uint32_t flags /*= 0*/)
+bool Game::removeMoney(Cylinder* cylinder, uint64_t money, uint32_t flags /*= 0*/, bool useBalance /*= false*/)
 {
 	if (cylinder == nullptr) {
 		return false;
@@ -1536,7 +1536,13 @@ bool Game::removeMoney(Cylinder* cylinder, uint64_t money, uint32_t flags /*= 0*
 		}
 	}
 
-	if (moneyCount < money) {
+	Player* player = useBalance ? dynamic_cast<Player*>(cylinder) : nullptr;
+ 	uint64_t balance = 0;
+ 	if (useBalance && player) {
+ 		balance = player->getBankBalance();
+ 	}
+ 
+ 	if (moneyCount + balance < money) {
 		return false;
 	}
 
@@ -1557,6 +1563,11 @@ bool Game::removeMoney(Cylinder* cylinder, uint64_t money, uint32_t flags /*= 0*
 			break;
 		}
 	}
+
+	if (useBalance && player && player->getBankBalance() >= money) {
+		player->setBankBalance(player->getBankBalance() - money);
+	}
+
 	return true;
 }
 
@@ -4184,6 +4195,10 @@ bool Game::combatChangeHealth(Creature* attacker, Creature* target, CombatDamage
 							message.text = fmt::format("You lose {:d} mana due to your own attack.", manaDamage);
 						} else {
 							message.text = fmt::format("You lose {:d} mana due to an attack by {:s}.", manaDamage, attacker->getNameDescription());
+							 // PREY
+							 if (tmpPlayer->hasActivePreyBonus(BONUS_DAMAGE_REDUCTION, attacker)) {
+								message.text = fmt::format("active prey bonus");
+													}
 						}
 					} else {
 						message.type = MESSAGE_DAMAGE_OTHERS;
@@ -4273,6 +4288,9 @@ bool Game::combatChangeHealth(Creature* attacker, Creature* target, CombatDamage
 				}
 
 				if (tmpPlayer == attackerPlayer && attackerPlayer != targetPlayer) {
+					if (tmpPlayer->hasActivePreyBonus(BONUS_DAMAGE_BOOST, target)) {
+						message.text = fmt::format("active prey bonus");
+					}	
 					message.type = MESSAGE_DAMAGE_DEALT;
 					message.text = fmt::format("{:s} loses {:s} due to your attack.", target->getNameDescription(), damageString);
 					message.text[0] = std::toupper(message.text[0]);
@@ -4284,6 +4302,9 @@ bool Game::combatChangeHealth(Creature* attacker, Creature* target, CombatDamage
 						message.text = fmt::format("You lose {:s} due to your own attack.", damageString);
 					} else {
 						message.text = fmt::format("You lose {:s} due to an attack by {:s}.", damageString, attacker->getNameDescription());
+						if (tmpPlayer->hasActivePreyBonus(BONUS_DAMAGE_REDUCTION, attacker)) {
+							message.text = fmt::format("active prey bonus");
+						} // PREY
 					}
 				} else {
 					message.type = MESSAGE_DAMAGE_OTHERS;
@@ -4423,6 +4444,9 @@ bool Game::combatChangeMana(Creature* attacker, Creature* target, CombatDamage& 
 					message.text = fmt::format("You lose {:d} mana due to your own attack.", manaLoss);
 				} else {
 					message.text = fmt::format("You lose {:d} mana due to an attack by {:s}.", manaLoss, attacker->getNameDescription());
+					if (tmpPlayer->hasActivePreyBonus(BONUS_DAMAGE_REDUCTION, attacker)) {
+						message.text = fmt::format("active prey bonus");
+					}
 				}
 			} else {
 				message.type = MESSAGE_DAMAGE_OTHERS;
@@ -5560,6 +5584,57 @@ void Game::parsePlayerExtendedOpcode(uint32_t playerId, uint8_t opcode, const st
 
 	for (CreatureEvent* creatureEvent : player->getCreatureEvents(CREATURE_EVENT_EXTENDED_OPCODE)) {
 		creatureEvent->executeExtendedOpcode(player, opcode, buffer);
+	}
+}
+
+void Game::playerRequestResourceData(uint32_t playerId, ResourceType_t resourceType) {
+	Player* player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	for (uint8_t preySlotId = 0; preySlotId < PREY_SLOTCOUNT; preySlotId++) {
+		player->sendFreeListRerollAvailability(preySlotId);
+	}
+
+	switch (resourceType) {
+		case RESOURCETYPE_BANK_GOLD: player->sendResourceData(RESOURCETYPE_BANK_GOLD, player->getBankBalance()); break;
+		case RESOURCETYPE_INVENTORY_GOLD: player->sendResourceData(RESOURCETYPE_INVENTORY_GOLD, player->getMoney()); break;
+		case RESOURCETYPE_PREY_BONUS_REROLLS: player->sendResourceData(RESOURCETYPE_PREY_BONUS_REROLLS, 0); break;
+		default: {
+			player->sendResourceData(RESOURCETYPE_BANK_GOLD, player->getBankBalance());
+			player->sendResourceData(RESOURCETYPE_INVENTORY_GOLD, player->getMoney());
+			player->sendResourceData(RESOURCETYPE_PREY_BONUS_REROLLS, player->getBonusRerollCount());
+			break;
+		}
+}
+
+}
+
+void Game::playerPreyAction(uint32_t playerId, uint8_t preySlotId, PreyAction_t preyAction, uint8_t monsterIndex)
+{
+	Player* player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	ReturnValue returnValue = RETURNVALUE_NOERROR;
+	switch (preyAction) {
+		case PREY_ACTION_LISTREROLL:
+			returnValue = player->rerollPreyData(preySlotId);
+			break;
+		case PREY_ACTION_BONUSREROLL:
+			returnValue = player->rerollPreyBonus(preySlotId);
+			break;
+		case PREY_ACTION_MONSTERSELECTION:
+			returnValue = player->changePreyDataState(preySlotId, STATE_ACTIVE, monsterIndex);
+			break;
+		default:
+			break;
+	}
+
+	if (returnValue != RETURNVALUE_NOERROR) {
+		player->sendMessageDialog(MESSAGEDIALOG_PREY_ERROR, getReturnMessage(returnValue));
 	}
 }
 
