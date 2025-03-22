@@ -1044,6 +1044,11 @@ class LuaScriptInterface
 		static int luaPlayerHasSecureMode(lua_State* L);
 		static int luaPlayerGetFightMode(lua_State* L);
 
+		static int luaPlayerGetPreyState(lua_State* L);
+ 		static int luaPlayerChangePreyState(lua_State* L);
+ 		static int luaPlayerGetBonusRerollCount(lua_State* L);
+ 		static int luaPlayerSetBonusRerollCount(lua_State* L);
+
 		static int luaPlayerGetStoreInbox(lua_State* L);
 
 		// Monster

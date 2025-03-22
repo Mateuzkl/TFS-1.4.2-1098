@@ -50,6 +50,9 @@ class IOLoginData
 		using ItemMap = std::map<uint32_t, std::pair<Item*, uint32_t>>;
 
 		static void loadItems(ItemMap& itemMap, DBResult_ptr result);
+		static void loadPreyData(std::vector<PreyData>& preyData, DBResult_ptr result);
+ 		static void readPreyList(std::vector<std::string>& preyList, PropStream& propStream);
+ 		static bool savePreyData(const Player* player);
 		static void loadItemsBinary(ItemMap& itemMap, DBResult_ptr result);
 		static bool saveItems(const Player* player, const ItemBlockList& itemList, DBInsert& query_insert, PropWriteStream& propWriteStream);
 		static bool saveItemsBinary(const Player* player, const ItemBlockList& itemList, DBInsert& query_insert, PropWriteStream& propWriteStream);

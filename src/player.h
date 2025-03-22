@@ -19,6 +19,7 @@
 #include "groups.h"
 #include "town.h"
 #include "mounts.h"
+#include "prey.h"
 #include "storeinbox.h"
 #include "rewardchest.h"
 
@@ -413,6 +414,8 @@ class Player final : public Creature, public Cylinder
 		uint64_t getExperience() const {
 			return experience;
 		}
+
+		void setStamina(uint16_t stamina);
 
 		time_t getLastLoginSaved() const {
 			return lastLoginSaved;
@@ -1110,6 +1113,76 @@ class Player final : public Creature, public Cylinder
 			}
 		}
 
+		void sendRerollPrice(uint32_t price) {
+			if (client) {
+				client->sendRerollPrice(price);
+			}
+		}
+
+		void sendPreyData(uint8_t preySlotId) {
+			if (client) {
+				client->sendPreyData(preySlotId);
+			}
+		}
+
+		void sendResourceData(ResourceType_t resourceType, int64_t amount) {
+			if (client) {
+				client->sendResourceData(resourceType, amount);
+			}
+		}
+
+		void sendFreeListRerollAvailability(uint8_t preySlotId) {
+			if (preySlotId >= PREY_SLOTCOUNT) {
+				return;
+			}
+
+			PreyData& currentPrey = preyData[preySlotId];
+			if (client && currentPrey.state != STATE_INACTIVE && currentPrey.state != STATE_LOCKED) {
+				client->sendFreeListRerollAvailability(preySlotId, getFreeRerollTime(preySlotId));
+			}
+		}
+
+		void sendPreyTimeLeft(uint8_t preySlotId) {
+			if (preySlotId >= PREY_SLOTCOUNT) {
+				return;
+			}
+
+			PreyData& currentPrey = preyData[preySlotId];
+			if (client) {
+				client->sendPreyTimeLeft(preySlotId, currentPrey.timeLeft);
+			}
+		}
+
+		int64_t getBonusRerollCount() {
+			return bonusRerollCount;
+		}
+		void setBonusRerollCount(int64_t count) {
+			bonusRerollCount = count;
+		}
+
+		void generatePreyData();
+		void setPreyData(std::vector<PreyData>&& preyData);
+		void serializePreyData(PropWriteStream& propWriteStream) const;
+		ReturnValue changePreyDataState(uint8_t preySlotId, PreyState state, uint8_t monsterIndex = 0);
+		void updateRerollPrice();
+		ReturnValue rerollPreyData(uint8_t preySlotId);
+		ReturnValue rerollPreyBonus(uint8_t preySlotId);
+		uint16_t getFreeRerollTime(uint8_t preySlotId);
+		uint16_t getPreyTimeLeft(uint8_t preySlotId);
+		void decreasePreyTimeLeft(uint16_t amount);
+
+		uint16_t getPreyBonusLoot(MonsterType* mType);
+		bool applyBonusExperience(uint64_t& gainExp, Creature* source);
+		bool applyBonusDamageBoost(CombatDamage&, Creature* opponent);
+		bool applyBonusDamageReduction(CombatDamage&, Creature* opponent);
+		bool hasActivePreyBonus(BonusType type, Creature* source);
+
+		void sendMessageDialog(MessageDialog_t type, const std::string& msg) const {
+			if (client) {
+				client->sendMessageDialog(type, msg);
+			}
+		}
+
 		void receivePing() {
 			lastPong = OTSYS_TIME();
 		}
@@ -1206,6 +1279,8 @@ class Player final : public Creature, public Cylinder
 		std::forward_list<std::string> learnedInstantSpellList;
 		std::forward_list<Condition*> storedConditionList; // TODO: This variable is only temporarily used when logging in, get rid of it somehow
 
+		std::vector<PreyData> preyData;
+
 		std::string name;
 		std::string guildNick;
 
@@ -1229,6 +1304,7 @@ class Player final : public Creature, public Cylinder
 		int64_t lastPing;
 		int64_t lastPong;
 		int64_t nextAction = 0;
+		int64_t bonusRerollCount = 0;
 
 		ProtocolGame_ptr client;
 		BedItem* bedItem = nullptr;

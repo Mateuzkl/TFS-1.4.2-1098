@@ -78,6 +78,34 @@ int64_t OTSYS_TIME();
 
 SpellGroup_t stringToSpellGroup(const std::string& value);
 
+template<typename T>
+ std::vector<T> selectRandom(std::vector<T> from, size_t k) {
+ 	std::shuffle(begin(from), std::end(from), getRandomGenerator());
+ 	from.resize(std::min<size_t>(k, from.size()));
+ 	std::sort(std::begin(from), std::end(from));
+ 	return from;
+ }
+ 
+ template<typename T, typename... Args>
+ std::vector<T> selectRandom(std::vector<T> from, size_t k, const std::vector<T>& elim, Args&&... args) {
+ 	std::vector<T> wh;
+ 
+ 	auto it2 = std::begin(elim);
+ 	for (auto it1 = std::begin(from); it1 != std::end(from); it1++) {
+ 		while (it2 != std::end(elim) && *it2 < *it1) it2++;
+ 		if (it2 == std::end(elim) || *it2 > *it1) {
+ 			wh.emplace_back(std::move(*it1));
+ 		}
+ 	}
+ 
+ 	return selectRandom(std::move(wh), k, std::forward<Args>(args)...);
+ }
+ 
+ template <typename E>
+ auto format_as(E e) -> std::underlying_type_t<E> {
+	 return static_cast<std::underlying_type_t<E>>(e);
+ }
+
 namespace tfs {
 
 #if __has_cpp_attribute(__cpp_lib_to_underlying)
